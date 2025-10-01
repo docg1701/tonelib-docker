@@ -148,6 +148,12 @@ tonelib-docker/
 
 Last LTS release with `libgl1-mesa-glx` and `libcurl3-gnutls`. Newer versions removed these packages.
 
+### Support the Project
+
+If this project helped you, consider supporting its development:
+
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/docg1701)
+
 ### License
 
 MIT - For Docker configuration files only.
@@ -303,6 +309,12 @@ tonelib-docker/
 ### Por que Ubuntu 20.04?
 
 Última versão LTS com `libgl1-mesa-glx` e `libcurl3-gnutls`. Versões mais novas removeram esses pacotes.
+
+### Apoie o Projeto
+
+Se este projeto te ajudou, considere apoiar seu desenvolvimento:
+
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/docg1701)
 
 ### Licença
 
