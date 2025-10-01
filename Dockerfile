@@ -5,18 +5,16 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 # Instalar dependências do sistema e bibliotecas gráficas/áudio
 RUN apt-get update && apt-get install -y \
+    # Dependências principais do ToneLib-GFX
     libcurl3-gnutls \
     libfreetype6 \
     libgl1-mesa-glx \
     libgl1-mesa-dri \
     libglu1-mesa \
+    # Bibliotecas X11
     libx11-6 \
     libxext6 \
     libxinerama1 \
-    libasound2 \
-    libpulse0 \
-    pulseaudio-utils \
-    alsa-utils \
     libxrandr2 \
     libxcursor1 \
     libxi6 \
@@ -25,23 +23,48 @@ RUN apt-get update && apt-get install -y \
     libxcomposite1 \
     libxdamage1 \
     libxshmfence1 \
+    x11-utils \
+    # Bibliotecas de áudio (PulseAudio + ALSA)
+    libasound2 \
+    libpulse0 \
+    pulseaudio-utils \
+    alsa-utils \
+    # JACK Audio (opcional, para baixa latência)
+    jackd2 \
+    libjack-jackd2-0 \
+    # Bibliotecas Qt5 (ToneLib usa Qt 5.14+)
+    qtbase5-dev \
+    libqt5widgets5 \
+    libqt5gui5 \
+    libqt5core5a \
+    libqt5multimedia5 \
+    libqt5network5 \
+    # Bibliotecas GTK e renderização de texto
+    libgtk-3-0 \
+    libglib2.0-0 \
+    libharfbuzz0b \
+    libfribidi0 \
+    libpango-1.0-0 \
+    libcairo2 \
+    # Outras dependências
     ca-certificates \
     fontconfig \
     fonts-dejavu-core \
     fonts-liberation \
     fonts-freefont-ttf \
-    x11-utils \
     && rm -rf /var/lib/apt/lists/*
 
-# Copiar o arquivo .deb para o container
+# Copiar arquivos para o container
 COPY ToneLib-GFX-amd64.deb /tmp/
+COPY entrypoint.sh /usr/local/bin/
 
 # Instalar o ToneLib-GFX
 RUN dpkg -i /tmp/ToneLib-GFX-amd64.deb || true && \
     apt-get update && \
     apt-get -f install -y && \
     rm /tmp/ToneLib-GFX-amd64.deb && \
-    rm -rf /var/lib/apt/lists/*
+    rm -rf /var/lib/apt/lists/* && \
+    chmod +x /usr/local/bin/entrypoint.sh
 
 # Criar usuário não-root com mesmo UID/GID do host
 ARG USER_ID=1000
@@ -54,8 +77,13 @@ RUN mkdir -p /home/tonelib/.config/pulse && \
     echo "default-server = unix:/run/user/${USER_ID}/pulse/native" > /home/tonelib/.config/pulse/client.conf && \
     chown -R tonelib:tonelib /home/tonelib/.config
 
+# Criar diretório para arquivos compartilhados
+RUN mkdir -p /home/tonelib/ToneLib-Files && \
+    chown -R tonelib:tonelib /home/tonelib/ToneLib-Files
+
 USER tonelib
 WORKDIR /home/tonelib
 
-# Comando padrão: executar o ToneLib-GFX
-CMD ["/usr/bin/ToneLib-GFX"]
+# Script de inicialização inteligente
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+CMD []

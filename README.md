@@ -73,14 +73,33 @@ cp ~/Downloads/*.mp3 ~/ToneLib-Files/
 
 ### Audio Latency
 
-**For home practice:** Works perfectly (10-20ms total).
+The container automatically detects and configures the best available audio backend:
 
-**Tips:**
+#### 🎯 PulseAudio (Default)
+- **Latency:** ~10-20ms total
+- **Setup:** Works out of the box
+- **Best for:** Home practice, jamming along tracks
+- **Configuration:** Buffer size 128-256 samples in ToneLib-GFX
+
+#### ⚡ JACK Audio (Low Latency)
+- **Latency:** ~3-5ms total
+- **Setup:** Install JACK on host and start before running container
+- **Best for:** Real-time playing, recording
+- **Auto-detected:** Container switches to JACK automatically if available
+
+**Tips for best performance:**
 - Use dedicated USB audio interface (not onboard)
-- Set buffer to 128-256 samples in ToneLib-GFX
-- Close other audio apps
+- Close other audio applications
+- For JACK: Install `jackd2` and `qjackctl` on your host system
+- Adjust buffer size in ToneLib-GFX settings (128 samples recommended)
 
-**Not recommended for:** Professional live shows or critical studio recording.
+**Technical improvements:**
+- Real-time audio capabilities enabled (`CAP_SYS_NICE`)
+- Memory locking for audio buffers (`ulimits`)
+- Optimized shared memory (512MB)
+- Qt logging disabled for lower overhead
+
+**Not recommended for:** Professional live shows (use native installation instead).
 
 ### Troubleshooting
 
@@ -100,6 +119,18 @@ pulseaudio --check || pulseaudio --start
 
 ```bash
 docker compose run --rm tonelib-gfx aplay -l
+```
+
+#### Shared folder files not appearing
+
+If files added to `~/ToneLib-Files/` don't appear in ToneLib-GFX:
+
+```bash
+# Rebuild container with latest fixes
+docker compose down
+docker rmi tonelib-gfx:latest
+docker compose build --no-cache
+docker compose up
 ```
 
 #### Clean and rebuild
@@ -207,14 +238,33 @@ cp ~/Downloads/*.mp3 ~/ToneLib-Files/
 
 ### Latência de Áudio
 
-**Para prática em casa:** Funciona perfeitamente (10-20ms total).
+O container detecta e configura automaticamente o melhor backend de áudio disponível:
 
-**Dicas:**
+#### 🎯 PulseAudio (Padrão)
+- **Latência:** ~10-20ms total
+- **Configuração:** Funciona imediatamente
+- **Ideal para:** Prática em casa, tocar junto com músicas
+- **Configuração:** Buffer de 128-256 samples no ToneLib-GFX
+
+#### ⚡ JACK Audio (Baixa Latência)
+- **Latência:** ~3-5ms total
+- **Configuração:** Instale JACK no host e inicie antes de executar o container
+- **Ideal para:** Tocar em tempo real, gravação
+- **Auto-detectado:** Container muda para JACK automaticamente se disponível
+
+**Dicas para melhor performance:**
 - Use interface USB dedicada (não onboard)
-- Configure buffer 128-256 samples no ToneLib-GFX
-- Feche outros apps de áudio
+- Feche outras aplicações de áudio
+- Para JACK: Instale `jackd2` e `qjackctl` no seu sistema host
+- Ajuste buffer no ToneLib-GFX (128 samples recomendado)
 
-**Não recomendado para:** Shows ao vivo profissionais ou gravação crítica de estúdio.
+**Melhorias técnicas:**
+- Capacidades de áudio real-time habilitadas (`CAP_SYS_NICE`)
+- Memory locking para buffers de áudio (`ulimits`)
+- Memória compartilhada otimizada (512MB)
+- Logging do Qt desabilitado para menor overhead
+
+**Não recomendado para:** Shows ao vivo profissionais (use instalação nativa).
 
 ### Troubleshooting
 
@@ -234,6 +284,18 @@ pulseaudio --check || pulseaudio --start
 
 ```bash
 docker compose run --rm tonelib-gfx aplay -l
+```
+
+#### Arquivos da pasta compartilhada não aparecem
+
+Se arquivos adicionados em `~/ToneLib-Files/` não aparecem no ToneLib-GFX:
+
+```bash
+# Reconstruir container com correções mais recentes
+docker compose down
+docker rmi tonelib-gfx:latest
+docker compose build --no-cache
+docker compose up
 ```
 
 #### Limpar e reconstruir

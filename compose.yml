@@ -12,7 +12,13 @@ services:
     environment:
       - DISPLAY=${DISPLAY}
       - QT_X11_NO_MITSHM=1
+      - QT_LOGGING_RULES=*.debug=false
+      # Configuração PulseAudio
       - PULSE_SERVER=unix:/run/user/${USER_ID:-1000}/pulse/native
+      - PULSE_LATENCY_MSEC=20
+      # Configuração JACK (se disponível)
+      - JACK_DEFAULT_SERVER=default
+      # Configuração OpenGL
       - LIBGL_ALWAYS_SOFTWARE=0
       - MESA_GL_VERSION_OVERRIDE=3.3
 
@@ -22,6 +28,9 @@ services:
 
       # Socket PulseAudio para áudio
       - /run/user/${USER_ID:-1000}/pulse:/run/user/${USER_ID:-1000}/pulse:ro
+
+      # Socket JACK para áudio de baixa latência (se disponível)
+      - /dev/shm:/dev/shm
 
       # Persistir configurações e presets do ToneLib-GFX
       - tonelib-config:/home/tonelib/.config
@@ -40,14 +49,26 @@ services:
       - audio
       - "29"  # GID do grupo audio (padrão na maioria dos sistemas)
 
+    # Capabilities para áudio real-time (melhor performance)
+    cap_add:
+      - SYS_NICE
+      - IPC_LOCK
+
+    # Limites para áudio real-time
+    ulimits:
+      rtprio: 95
+      memlock:
+        soft: -1
+        hard: -1
+
     # Necessário para acesso a dispositivos de áudio
     privileged: false
 
     # Compartilhar IPC do host (necessário para transparências/popups)
     ipc: host
 
-    # Aumentar shared memory (corrige corrupção gráfica)
-    shm_size: 256mb
+    # Aumentar shared memory (corrige corrupção gráfica e JACK)
+    shm_size: 512mb
 
     # Política de reinício
     restart: "no"
