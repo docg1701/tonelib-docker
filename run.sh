@@ -21,19 +21,20 @@ xhost +local:docker > /dev/null 2>&1 || {
 export USER_ID=$(id -u)
 export GROUP_ID=$(id -g)
 
-# Criar pasta compartilhada se não existir
-SHARED_DIR="$HOME/ToneLib-Files"
-if [ ! -d "$SHARED_DIR" ]; then
-    echo -e "${GREEN}[SETUP]${NC} Criando pasta compartilhada em $SHARED_DIR..."
-    mkdir -p "$SHARED_DIR"
+# Criar diretório home do ToneLib se não existir
+TONELIB_HOME="$HOME/tonelib"
+if [ ! -d "$TONELIB_HOME" ]; then
+    echo -e "${GREEN}[SETUP]${NC} Criando diretório ToneLib em $TONELIB_HOME..."
+    mkdir -p "$TONELIB_HOME"
 
-    # Copiar README para a pasta compartilhada
+    # Copiar README para o diretório
     if [ -f "ToneLib-Files-README.md" ]; then
-        cp ToneLib-Files-README.md "$SHARED_DIR/README.md"
+        cp ToneLib-Files-README.md "$TONELIB_HOME/README.md"
     fi
 
-    echo -e "${YELLOW}[INFO]${NC} Pasta compartilhada criada!"
-    echo -e "${YELLOW}[INFO]${NC} Localização: $SHARED_DIR"
+    echo -e "${YELLOW}[INFO]${NC} Diretório ToneLib criado!"
+    echo -e "${YELLOW}[INFO]${NC} Localização: $TONELIB_HOME"
+    echo -e "${YELLOW}[INFO]${NC} Gravações estarão em: $TONELIB_HOME/Music/GFX-Recordings"
 fi
 
 # Verificar se o arquivo .deb existe

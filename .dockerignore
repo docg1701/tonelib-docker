@@ -10,6 +10,8 @@ Dockerfile
 # Scripts
 run.sh
 *.sh
+# Exceção: permitir entrypoint.sh (necessário no container)
+!entrypoint.sh
 
 # Documentação
 README.md

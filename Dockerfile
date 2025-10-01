@@ -77,10 +77,6 @@ RUN mkdir -p /home/tonelib/.config/pulse && \
     echo "default-server = unix:/run/user/${USER_ID}/pulse/native" > /home/tonelib/.config/pulse/client.conf && \
     chown -R tonelib:tonelib /home/tonelib/.config
 
-# Criar diretório para arquivos compartilhados
-RUN mkdir -p /home/tonelib/ToneLib-Files && \
-    chown -R tonelib:tonelib /home/tonelib/ToneLib-Files
-
 USER tonelib
 WORKDIR /home/tonelib
 

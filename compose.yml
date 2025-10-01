@@ -32,12 +32,12 @@ services:
       # Socket JACK para áudio de baixa latência (se disponível)
       - /dev/shm:/dev/shm
 
-      # Persistir configurações e presets do ToneLib-GFX
+      # Diretório home do ToneLib (arquivos, gravações, backing tracks, IRs, presets)
+      - ${HOME}/tonelib:/home/tonelib:rw
+
+      # Persistir configurações e presets do ToneLib-GFX (sobrescreve subpastas do home)
       - tonelib-config:/home/tonelib/.config
       - tonelib-data:/home/tonelib/.local
-
-      # Pasta compartilhada para backing tracks, IRs, presets, etc.
-      - ${HOME}/ToneLib-Files:/home/tonelib/ToneLib-Files:rw
 
     # Acesso a dispositivos de áudio e GPU
     devices:

@@ -58,11 +58,12 @@ export QT_LOGGING_RULES="*.debug=false"
 echo -e "${BLUE}[INFO]${NC} Backend de áudio: ${AUDIO_BACKEND}"
 echo -e "${BLUE}[INFO]${NC} Latência esperada: ${LATENCY_INFO}"
 
-# Verificar se pasta compartilhada está acessível
-if [ -d "/home/tonelib/ToneLib-Files" ]; then
-    echo -e "${GREEN}[OK]${NC} Pasta compartilhada montada em: /home/tonelib/ToneLib-Files"
+# Verificar se diretório home está montado
+if mountpoint -q /home/tonelib 2>/dev/null || [ -w /home/tonelib ]; then
+    echo -e "${GREEN}[OK]${NC} Diretório home montado e acessível"
+    echo -e "${BLUE}[INFO]${NC} Gravações em: /home/tonelib/Music/GFX-Recordings"
 else
-    echo -e "${YELLOW}[AVISO]${NC} Pasta compartilhada não encontrada"
+    echo -e "${YELLOW}[AVISO]${NC} Diretório home não está montado corretamente"
 fi
 
 # Iniciar ToneLib-GFX

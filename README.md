@@ -62,13 +62,19 @@ Will appear in: Menu → Multimedia → ToneLib GFX (Docker)
 
 ### Shared Folder
 
-Files in `~/ToneLib-Files/` are accessible in ToneLib-GFX at `/home/tonelib/ToneLib-Files/`.
+The entire ToneLib home directory `~/tonelib/` is shared with the container.
 
-Use for backing tracks, IRs, presets, etc.
+**Useful directories:**
+- `~/tonelib/` - Add your backing tracks, IRs, presets here
+- `~/tonelib/Music/GFX-Recordings/` - Your recordings will be saved here
+- All files are directly accessible from ToneLib-GFX
 
 ```bash
-# Example
-cp ~/Downloads/*.mp3 ~/ToneLib-Files/
+# Example: Add backing tracks
+cp ~/Downloads/*.mp3 ~/tonelib/
+
+# Example: Access recordings
+ls ~/tonelib/Music/GFX-Recordings/
 ```
 
 ### Audio Latency
@@ -93,14 +99,6 @@ The container automatically detects and configures the best available audio back
 - For JACK: Install `jackd2` and `qjackctl` on your host system
 - Adjust buffer size in ToneLib-GFX settings (128 samples recommended)
 
-**Technical improvements:**
-- Real-time audio capabilities enabled (`CAP_SYS_NICE`)
-- Memory locking for audio buffers (`ulimits`)
-- Optimized shared memory (512MB)
-- Qt logging disabled for lower overhead
-
-**Not recommended for:** Professional live shows (use native installation instead).
-
 ### Troubleshooting
 
 #### Application doesn't open
@@ -121,18 +119,6 @@ pulseaudio --check || pulseaudio --start
 docker compose run --rm tonelib-gfx aplay -l
 ```
 
-#### Shared folder files not appearing
-
-If files added to `~/ToneLib-Files/` don't appear in ToneLib-GFX:
-
-```bash
-# Rebuild container with latest fixes
-docker compose down
-docker rmi tonelib-gfx:latest
-docker compose build --no-cache
-docker compose up
-```
-
 #### Clean and rebuild
 
 ```bash
@@ -144,13 +130,18 @@ docker compose build --no-cache
 ### Structure
 
 ```
-~/ToneLib-Files/          # Shared folder (created automatically)
+~/tonelib/                      # ToneLib home directory (created automatically)
+  ├── Music/
+  │   └── GFX-Recordings/      # Your recordings
+  └── (your backing tracks, IRs, presets)
+
 tonelib-docker/
 ├── Dockerfile
 ├── compose.yml
+├── entrypoint.sh
 ├── run.sh
 ├── install-desktop.sh
-└── ToneLib-GFX-amd64.deb # (you add this)
+└── ToneLib-GFX-amd64.deb       # (you add this)
 ```
 
 ### Why Ubuntu 20.04?
@@ -227,13 +218,19 @@ Aparecerá em: Menu → Multimídia → ToneLib GFX (Docker)
 
 ### Pasta Compartilhada
 
-Arquivos em `~/ToneLib-Files/` ficam acessíveis no ToneLib-GFX em `/home/tonelib/ToneLib-Files/`.
+O diretório home completo do ToneLib `~/tonelib/` é compartilhado com o container.
 
-Use para backing tracks, IRs, presets, etc.
+**Diretórios úteis:**
+- `~/tonelib/` - Adicione backing tracks, IRs, presets aqui
+- `~/tonelib/Music/GFX-Recordings/` - Suas gravações serão salvas aqui
+- Todos os arquivos são diretamente acessíveis do ToneLib-GFX
 
 ```bash
-# Exemplo
-cp ~/Downloads/*.mp3 ~/ToneLib-Files/
+# Exemplo: Adicionar backing tracks
+cp ~/Downloads/*.mp3 ~/tonelib/
+
+# Exemplo: Acessar gravações
+ls ~/tonelib/Music/GFX-Recordings/
 ```
 
 ### Latência de Áudio
@@ -258,14 +255,6 @@ O container detecta e configura automaticamente o melhor backend de áudio dispo
 - Para JACK: Instale `jackd2` e `qjackctl` no seu sistema host
 - Ajuste buffer no ToneLib-GFX (128 samples recomendado)
 
-**Melhorias técnicas:**
-- Capacidades de áudio real-time habilitadas (`CAP_SYS_NICE`)
-- Memory locking para buffers de áudio (`ulimits`)
-- Memória compartilhada otimizada (512MB)
-- Logging do Qt desabilitado para menor overhead
-
-**Não recomendado para:** Shows ao vivo profissionais (use instalação nativa).
-
 ### Troubleshooting
 
 #### Aplicativo não abre
@@ -286,18 +275,6 @@ pulseaudio --check || pulseaudio --start
 docker compose run --rm tonelib-gfx aplay -l
 ```
 
-#### Arquivos da pasta compartilhada não aparecem
-
-Se arquivos adicionados em `~/ToneLib-Files/` não aparecem no ToneLib-GFX:
-
-```bash
-# Reconstruir container com correções mais recentes
-docker compose down
-docker rmi tonelib-gfx:latest
-docker compose build --no-cache
-docker compose up
-```
-
 #### Limpar e reconstruir
 
 ```bash
@@ -309,13 +286,18 @@ docker compose build --no-cache
 ### Estrutura
 
 ```
-~/ToneLib-Files/          # Pasta compartilhada (criada automaticamente)
+~/tonelib/                      # Diretório home do ToneLib (criado automaticamente)
+  ├── Music/
+  │   └── GFX-Recordings/      # Suas gravações
+  └── (backing tracks, IRs, presets)
+
 tonelib-docker/
 ├── Dockerfile
 ├── compose.yml
+├── entrypoint.sh
 ├── run.sh
 ├── install-desktop.sh
-└── ToneLib-GFX-amd64.deb # (você adiciona)
+└── ToneLib-GFX-amd64.deb       # (você adiciona)
 ```
 
 ### Por que Ubuntu 20.04?
