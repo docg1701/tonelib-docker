@@ -1,0 +1,28 @@
+# Arquivo .deb (não distribuir por questões de licença)
+*.deb
+
+# Volumes Docker
+.docker/
+
+# Logs
+*.log
+
+# Arquivos temporários
+*.tmp
+*.swp
+*.swo
+*~
+
+# Backups
+*.tar.gz
+*.zip
+tonelib-backup-*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.iml

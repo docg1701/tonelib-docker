@@ -1,0 +1,21 @@
+# Git
+.git
+.gitignore
+
+# Docker
+compose.yml
+Dockerfile
+.dockerignore
+
+# Scripts
+run.sh
+*.sh
+
+# Documentação
+README.md
+*.md
+
+# Arquivos temporários
+*.log
+*.tmp
+.DS_Store

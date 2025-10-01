@@ -1,0 +1,61 @@
+services:
+  tonelib-gfx:
+    build:
+      context: .
+      args:
+        USER_ID: ${USER_ID:-1000}
+        GROUP_ID: ${GROUP_ID:-1000}
+    image: tonelib-gfx:latest
+    container_name: tonelib-gfx
+
+    # Suporte a interface gráfica via X11
+    environment:
+      - DISPLAY=${DISPLAY}
+      - QT_X11_NO_MITSHM=1
+      - PULSE_SERVER=unix:/run/user/${USER_ID:-1000}/pulse/native
+      - LIBGL_ALWAYS_SOFTWARE=0
+      - MESA_GL_VERSION_OVERRIDE=3.3
+
+    volumes:
+      # Socket X11 para interface gráfica
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+
+      # Socket PulseAudio para áudio
+      - /run/user/${USER_ID:-1000}/pulse:/run/user/${USER_ID:-1000}/pulse:ro
+
+      # Persistir configurações e presets do ToneLib-GFX
+      - tonelib-config:/home/tonelib/.config
+      - tonelib-data:/home/tonelib/.local
+
+      # Pasta compartilhada para backing tracks, IRs, presets, etc.
+      - ${HOME}/ToneLib-Files:/home/tonelib/ToneLib-Files:rw
+
+    # Acesso a dispositivos de áudio e GPU
+    devices:
+      - /dev/snd:/dev/snd
+      - /dev/dri:/dev/dri
+
+    # Adicionar usuário aos grupos de áudio do host
+    group_add:
+      - audio
+      - "29"  # GID do grupo audio (padrão na maioria dos sistemas)
+
+    # Necessário para acesso a dispositivos de áudio
+    privileged: false
+
+    # Compartilhar IPC do host (necessário para transparências/popups)
+    ipc: host
+
+    # Aumentar shared memory (corrige corrupção gráfica)
+    shm_size: 256mb
+
+    # Política de reinício
+    restart: "no"
+
+    # Manter container ativo mesmo se o app fechar
+    stdin_open: true
+    tty: true
+
+volumes:
+  tonelib-config:
+  tonelib-data:
