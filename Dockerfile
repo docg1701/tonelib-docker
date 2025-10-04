@@ -6,7 +6,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Instalar dependências do sistema e bibliotecas gráficas/áudio
 RUN apt-get update && apt-get install -y \
     # Dependências principais do ToneLib-GFX
-    libcurl3-gnutls \
+    libcurl4 \
     libfreetype6 \
     libgl1-mesa-glx \
     libgl1-mesa-dri \
