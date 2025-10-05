@@ -84,6 +84,10 @@ RUN mkdir -p /home/tonelib/.config/pulse && \
 USER tonelib
 WORKDIR /home/tonelib
 
+# Healthcheck: verifica se o ToneLib está rodando
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+  CMD pgrep -f "ToneLib" || exit 1
+
 # Script de inicialização inteligente
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD []
