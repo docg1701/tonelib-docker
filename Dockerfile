@@ -26,12 +26,16 @@ RUN apt-get update && apt-get install -y \
     x11-utils \
     # Bibliotecas de áudio (PulseAudio + ALSA)
     libasound2 \
+    libasound2-plugins \
     libpulse0 \
     pulseaudio-utils \
     alsa-utils \
-    # JACK Audio (opcional, para baixa latência)
+    # JACK Audio (para baixa latência)
     jackd2 \
     libjack-jackd2-0 \
+    qjackctl \
+    pulseaudio-module-jack \
+    a2jmidid \
     # Bibliotecas Qt5 (ToneLib usa Qt 5.14+)
     qtbase5-dev \
     libqt5widgets5 \
