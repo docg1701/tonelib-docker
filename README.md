@@ -39,7 +39,7 @@ Download the `.deb` file from the [official website](https://tonelib.net/gfx-ove
 #### 3. Clone and prepare
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/tonelib-docker.git
+git clone https://github.com/docg1701/tonelib-docker.git
 cd tonelib-docker
 mv ~/Downloads/ToneLib-GFX-amd64.deb .
 ```
@@ -201,7 +201,7 @@ Baixe o arquivo `.deb` do [site oficial](https://tonelib.net/gfx-overview/).
 #### 3. Clonar e preparar
 
 ```bash
-git clone https://github.com/SEU_USUARIO/tonelib-docker.git
+git clone https://github.com/docg1701/tonelib-docker.git
 cd tonelib-docker
 mv ~/Downloads/ToneLib-GFX-amd64.deb .
 ```
