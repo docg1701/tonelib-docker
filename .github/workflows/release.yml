@@ -38,14 +38,16 @@ jobs:
           DEB_VERSION=$(dpkg-deb -f ToneLib-GFX-amd64.deb Version)
           echo "version=${DEB_VERSION//-/.}" >> "$GITHUB_OUTPUT"
 
-      - name: Check tag matches package version
+      - name: Check tag format
         if: startsWith(github.ref, 'refs/tags/v')
         run: |
+          # A tag é a versão DESTE empacotamento (vX.Y.Z); a versão do ToneLib
+          # vem do .deb e vai no título/notas da release.
           TAG_VERSION="${GITHUB_REF_NAME#v}"
           PKG_VERSION="${{ steps.build.outputs.version }}"
-          echo "tag=$TAG_VERSION pacote=$PKG_VERSION"
-          if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
-            echo "::error::A tag $GITHUB_REF_NAME não corresponde à versão publicada ($PKG_VERSION)."
+          echo "empacotamento (tag)=$TAG_VERSION | ToneLib (pacote)=$PKG_VERSION"
+          if ! echo "$TAG_VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::Tag $GITHUB_REF_NAME deve ser vX.Y.Z (versão do empacotamento)."
             exit 1
           fi
 
@@ -116,7 +118,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          NOTES="ToneLib-GFX ${{ steps.build.outputs.version }} — scripts atualizados para esta versão.
+          NOTES="Empacotamento ${GITHUB_REF_NAME#v} para o ToneLib-GFX ${{ steps.build.outputs.version }}.
 
           Esta release **não inclui binários**: ToneLib-GFX é proprietário e não é redistribuído aqui.
 
@@ -139,5 +141,5 @@ jobs:
           if gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
             gh release edit "$GITHUB_REF_NAME" --notes "$NOTES"
           else
-            gh release create "$GITHUB_REF_NAME" --title "ToneLib-GFX ${{ steps.build.outputs.version }}" --notes "$NOTES"
+            gh release create "$GITHUB_REF_NAME" --title "Empacotamento ${GITHUB_REF_NAME#v} — ToneLib-GFX ${{ steps.build.outputs.version }}" --notes "$NOTES"
           fi

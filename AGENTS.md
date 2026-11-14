@@ -142,17 +142,22 @@ está quebrado.
 
 ## Release
 
+A tag é a versão **deste empacotamento** (`vX.Y.Z`), não a do ToneLib. A versão
+do ToneLib sai do `.deb` e vai no título/notas da release.
+
 ```bash
-git tag v4.9.5
-git push origin v4.9.5
+git tag -a v1.0.0 -m "Empacotamento 1.0.0"
+git push origin v1.0.0
 ```
 
-A workflow baixa o `.deb` mais recente do tonelib.net, roda `build-appimage.sh`,
-valida o build com um smoke test headless (Xvfb + xwininfo) e cria a release com
-as instruções de uso. **Ela falha** se a versão do pacote não bater com a tag.
+A workflow baixa o `.deb` mais recente do tonelib.net, roda `build-appimage.sh`
+(sem instalar `squashfs-tools` antes, de propósito — exercita a elevação do
+`lib/root.sh`), valida com smoke test headless (Xvfb + xwininfo), builda a imagem
+Docker e cria a release com as instruções. Ela exige tag no formato `vX.Y.Z`.
 
 Nenhum binário é anexado à release nem commitado: o `.deb` e o AppImage são
-propriedade da ToneLib e cada usuário gera o seu localmente.
+propriedade da ToneLib e cada usuário gera o seu localmente com
+`ToneLib-GFX-amd64.deb` → `./build-appimage.sh` → `ToneLib-GFX-amd64.AppImage`.
 
 ## Estilo
 
