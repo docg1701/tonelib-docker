@@ -22,27 +22,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Install build dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends squashfs-tools curl file
-
-      - name: Download ToneLib-GFX .deb
-        run: |
-          curl -fL --retry 3 --connect-timeout 20 \
-            -o ToneLib-GFX-amd64.deb \
-            "https://tonelib.net/download.php?id=gfx&os=lnx"
-          if [ "$(head -c 8 ToneLib-GFX-amd64.deb)" != '!<arch>' ]; then
-            echo "::error::O download não é um .deb válido"
-            exit 1
-          fi
-          echo "Versão do pacote: $(dpkg-deb -f ToneLib-GFX-amd64.deb Version)"
-
       - name: Build AppImage
         id: build
         run: |
+          # Não instalamos squashfs-tools aqui de propósito: o próprio script
+          # pede sudo e instala o que faltar (exercita lib/root.sh no CI).
           chmod +x build-appimage.sh
-          ./build-appimage.sh
+          ./build-appimage.sh --download
 
           APPIMAGE=$(ls -1 ToneLib-GFX-*-x86_64.AppImage | head -1)
           echo "appimage=$APPIMAGE" >> "$GITHUB_OUTPUT"

@@ -23,10 +23,15 @@ O repositório **não contém binários da ToneLib**.
   a maior parte das libs gráficas é inútil aqui).
 - Documentação é **bilíngue**: toda mudança de comportamento vai no `README.md`
   em inglês **e** em português.
-- **Scripts que precisam de root devem pedir autorização**, nunca só morrer com
-  "instale X". Use `lib/prompt.sh` (`ask_sudo`, `require_tool`, `pm_install`):
-  mostra a descrição + o comando `sudo` exato, pergunta `[s/N]`, executa;
-  sem TTY (CI/pipe) imprime o comando e falha em vez de travar.
+- **Scripts que precisam de root elevam sozinhos**, nunca imprimem comando para
+  o usuário copiar. Use `lib/root.sh`:
+  `parse_sudo_context "$@"; set -- "${SCRIPT_ARGS[@]}"; ensure_root "$0" "$@"`.
+  O script pede a senha no terminal uma vez e a partir daí roda inteiro como
+  root, com `ORIG_USER`/`ORIG_HOME`/`ORIG_UID`/`ORIG_GID`/`ORIG_DISPLAY` do
+  usuário que chamou (sudo reseta HOME e pode descartar DISPLAY).
+- **Arquivo criado como root volta para o usuário**: chame
+  `give_back <caminho>` no fim do script (o CI roda como `runner` com sudo e
+  valida esse caminho).
 
 ## Ambiente: você NÃO tem root
 
@@ -35,8 +40,10 @@ falta de permissão ou de pacote — nada de `bwrap`, `unshare`, `debootstrap`,
 `chroot`, `mknod`, rootfs falso em `/tmp` ou container caseiro. Isso gasta tempo e
 suja a máquina.
 
-Se faltar uma ferramenta, **peça ao Galvani** com o pacote Debian exato e o
-comando pronto. Verifique o nome/versão antes, sem root:
+Os scripts do repositório já se elevam sozinhos (`lib/root.sh`), então não é
+preciso pedir ao Galvani para rodar com `sudo`. Se faltar uma ferramenta **na
+máquina**, peça o pacote Debian exato e o comando pronto (ver tabela abaixo) em
+vez de improvisar. Verifique o nome/versão antes, sem root:
 
 ```bash
 apt-cache policy squashfs-tools        # Candidato: 1:4.6.1-1
@@ -126,7 +133,7 @@ está quebrado.
 | `run.sh` | baixa/valida o `.deb`, reconstrói se o sha256 mudou, sobe o compose |
 | `build-appimage.sh` | `.deb` → AppDir → runtime pinado + squashfs → AppImage |
 | `install-desktop.sh` | gera entradas `.desktop` para AppImage e Docker |
-| `lib/prompt.sh` | prompt de sudo: pergunta antes de instalar pacote/iniciar serviço |
+| `lib/root.sh` | elevação via sudo: pede a senha, roda como root, devolve a posse dos arquivos |
 | `.github/workflows/release.yml` | em tag `v*`: baixa o `.deb`, gera AppImage, publica release |
 
 ## Release

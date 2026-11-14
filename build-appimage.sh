@@ -34,6 +34,16 @@ info() { echo -e "${YELLOW}[INFO]${NC} $*"; }
 ok() { echo -e "${GREEN}[OK]${NC} $*"; }
 die() { echo -e "${RED}[ERRO]${NC} $*" >&2; exit 1; }
 
+# ---------------------------------------------------------------------------
+# Elevação: contexto do usuário + sudo se necessário (ver lib/root.sh)
+# ---------------------------------------------------------------------------
+[ -f "$REPO_DIR/lib/root.sh" ] || die "Arquivo lib/root.sh não encontrado (clone incompleto?)."
+# shellcheck source=lib/root.sh
+. "$REPO_DIR/lib/root.sh"
+
+parse_sudo_context "$@"
+set -- "${SCRIPT_ARGS[@]}"
+
 DOWNLOAD=0
 case "${1:-}" in
     --download) DOWNLOAD=1 ;;
@@ -43,22 +53,21 @@ case "${1:-}" in
         echo "  --download  baixa o .deb de tonelib.net se ele não estiver no diretório"
         echo ""
         echo "Gera ToneLib-GFX-<versão>-x86_64.AppImage."
-        echo "Requer: curl, mksquashfs (pacote squashfs-tools) e dpkg (ou binutils/ar)."
+        echo "O script pede a senha do sudo e roda como root (instala squashfs-tools/curl se faltar)."
         exit 0
         ;;
     "") ;;
     *) die "Argumento desconhecido: $1 (use --help)" ;;
 esac
 
-# ---------------------------------------------------------------------------
-# Dependências do host (com prompt de sudo — ver lib/prompt.sh)
-# ---------------------------------------------------------------------------
-[ -f "$REPO_DIR/lib/prompt.sh" ] || die "Arquivo lib/prompt.sh não encontrado (clone incompleto?)."
-# shellcheck source=lib/prompt.sh
-. "$REPO_DIR/lib/prompt.sh"
+ensure_root "$REPO_DIR/build-appimage.sh" "$@"
 
+# ---------------------------------------------------------------------------
+# Dependências do host (instaladas automaticamente, o script já é root)
+# ---------------------------------------------------------------------------
 require_tool mksquashfs squashfs-tools || die "Sem mksquashfs não é possível empacotar o AppImage."
 require_tool curl curl || die "Sem curl não é possível baixar o runtime do AppImage."
+info "Buildando como root; arquivos gerados serão devolvidos a $ORIG_USER ($ORIG_UID:$ORIG_GID)."
 
 # ---------------------------------------------------------------------------
 # .deb de entrada
@@ -69,6 +78,7 @@ if [ ! -f "$DEB_FILE" ]; then
         curl -fL --retry 3 -o "${DEB_FILE}.part" "$DEB_URL" || { rm -f "${DEB_FILE}.part"; die "Download falhou."; }
         [ "$(head -c 8 "${DEB_FILE}.part")" = '!<arch>' ] || { rm -f "${DEB_FILE}.part"; die "Download não é um .deb válido."; }
         mv "${DEB_FILE}.part" "$DEB_FILE"
+        give_back "$DEB_FILE"
     else
         die "$DEB_FILE não encontrado.
   Baixe em https://tonelib.net/gfx-overview/ (Ubuntu 64-bit) e salve como:
@@ -212,6 +222,10 @@ cat "$RUNTIME" "$BUILD_DIR/ToneLib.squashfs" > "$REPO_DIR/$OUTPUT_NAME"
 chmod +x "$REPO_DIR/$OUTPUT_NAME"
 
 rm -rf "$BUILD_DIR"
+
+# Como o script roda como root, devolve a posse ao usuário que chamou
+give_back "$CACHE_DIR"
+give_back "$REPO_DIR/$OUTPUT_NAME"
 
 ok "AppImage gerado: $REPO_DIR/$OUTPUT_NAME"
 info "Tamanho: $(du -h "$REPO_DIR/$OUTPUT_NAME" | cut -f1)"

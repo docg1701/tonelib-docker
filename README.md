@@ -60,10 +60,14 @@ sudo apt install squashfs-tools        # Debian/Ubuntu
 ./ToneLib-GFX-4.9.5-x86_64.AppImage
 ```
 
-If `squashfs-tools`, `curl` or `xz` are missing, the script shows the exact
-`sudo` command and **asks for permission** before installing it
-(`lib/prompt.sh`). In non-interactive runs (CI, pipes) it does not prompt: it
-prints the command and exits with an error.
+Run the script from a normal user: it asks for your `sudo` password and from
+then on **runs as root** (installing `squashfs-tools`/`curl` automatically if
+they are missing). Files it creates are handed back to your user at the end, so
+you don't end up with root-owned files in the repository.
+
+```bash
+./build-appimage.sh      # --download baixa o .deb se ele não estiver aqui
+```
 
 `build-appimage.sh` unpacks the `.deb`, adds an `AppRun` wrapper and packs
 everything into a single executable file (runtime + squashfs). It also prints
@@ -101,10 +105,9 @@ newgrp docker
 ./run.sh
 ```
 
-`run.sh` does the same for Docker: if `docker`, the `docker compose` plugin or
-socket access is missing, it shows the `sudo` command and asks for permission
-before running it (installing Docker via get.docker.com, adding your user to the
-`docker` group).
+`run.sh` does the same: it asks for your `sudo` password once, runs as root and
+takes care of Docker for you — installing the engine (get.docker.com), the
+`docker compose` plugin and starting the daemon if any of them is missing.
 
 `run.sh` downloads the latest `.deb` from tonelib.net if it is missing, and
 rebuilds the image only when the `.deb` changes (it compares the file's sha256
@@ -198,7 +201,7 @@ tonelib-docker/
 ├── run.sh                      # Docker: download + build + run
 ├── build-appimage.sh           # AppImage: build from the .deb
 ├── install-desktop.sh          # menu entries
-├── lib/prompt.sh               # sudo prompt helper
+├── lib/root.sh                 # sudo elevation helper (script runs as root)
 ├── AGENTS.md                   # notes for AI/code agents
 └── ToneLib-GFX-amd64.deb       # (you add this, never committed)
 ```
@@ -283,9 +286,14 @@ sudo apt install squashfs-tools        # Debian/Ubuntu
 ./ToneLib-GFX-4.9.5-x86_64.AppImage
 ```
 
-Se faltar `squashfs-tools`, `curl` ou `xz`, o script mostra o comando `sudo`
-exato e **pede autorização** antes de instalar (`lib/prompt.sh`). Em execução
-não-interativa (CI, pipes) ele não pergunta: imprime o comando e sai com erro.
+Execute o script como usuário normal: ele pede a senha do `sudo` e, a partir
+daí, **roda como root** (instala `squashfs-tools`/`curl` sozinho se faltar). No
+final, os arquivos gerados são devolvidos ao seu usuário — nada de arquivo com
+dono `root` no repositório.
+
+```bash
+./build-appimage.sh      # --download baixa o .deb se ele não estiver aqui
+```
 
 O `build-appimage.sh` descompacta o `.deb`, adiciona o wrapper `AppRun` e
 empacota tudo num único executável (runtime + squashfs). No final ele mostra o
@@ -322,10 +330,9 @@ newgrp docker
 ./run.sh
 ```
 
-O `run.sh` faz o mesmo para o Docker: se faltar `docker`, o plugin
-`docker compose` ou acesso ao socket, ele mostra o comando `sudo` e pede
-autorização antes de rodar (instala via get.docker.com, adiciona seu usuário ao
-grupo `docker`).
+O `run.sh` faz o mesmo: pede a senha do `sudo` uma vez, roda como root e resolve
+o Docker por você — instala o engine (get.docker.com), o plugin
+`docker compose` e sobe o daemon se faltar algum.
 
 O `run.sh` baixa o `.deb` mais recente do tonelib.net se ele não existir e
 reconstrói a imagem só quando o `.deb` muda (compara o sha256 do arquivo com
@@ -418,7 +425,7 @@ tonelib-docker/
 ├── run.sh                      # Docker: baixar + buildar + rodar
 ├── build-appimage.sh           # AppImage: gera a partir do .deb
 ├── install-desktop.sh          # entradas no menu
-├── lib/prompt.sh               # prompt de sudo
+├── lib/root.sh                 # elevação via sudo (script roda como root)
 ├── AGENTS.md                   # notas para agentes de IA/código
 └── ToneLib-GFX-amd64.deb       # (você adiciona, nunca é commitado)
 ```

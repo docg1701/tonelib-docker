@@ -2,6 +2,9 @@
 
 # Script para executar o ToneLib-GFX no Docker com suporte gráfico e áudio
 # Baixa o .deb mais recente se necessário e reconstrói a imagem quando ele muda.
+#
+# Ao ser executado sem root, pede a senha via sudo e segue rodando como root
+# (a partir daí instala dependências e fala com o daemon sem novo prompt).
 
 set -e
 
@@ -22,6 +25,16 @@ info() { echo -e "${YELLOW}[INFO]${NC} $*"; }
 ok() { echo -e "${GREEN}[OK]${NC} $*"; }
 die() { echo -e "${RED}[ERRO]${NC} $*" >&2; exit 1; }
 
+# ---------------------------------------------------------------------------
+# Elevação: contexto do usuário + sudo se necessário
+# ---------------------------------------------------------------------------
+[ -f "$REPO_DIR/lib/root.sh" ] || die "Arquivo lib/root.sh não encontrado (clone incompleto?)."
+# shellcheck source=lib/root.sh
+. "$REPO_DIR/lib/root.sh"
+
+parse_sudo_context "$@"
+set -- "${SCRIPT_ARGS[@]}"
+
 # --update força baixar a versão publicada mais recente
 UPDATE=0
 case "${1:-}" in
@@ -31,60 +44,54 @@ case "${1:-}" in
         echo ""
         echo "  (sem argumentos)  usa o $DEB_FILE local ou baixa se não existir"
         echo "  --update          baixa novamente a versão mais recente de tonelib.net"
+        echo ""
+        echo "O script pede a senha do sudo e roda como root (instala Docker se faltar)."
         exit 0
         ;;
     "") ;;
     *) die "Argumento desconhecido: $1 (use --help)" ;;
 esac
 
+ensure_root "$REPO_DIR/run.sh" "$@"
+
 echo -e "${GREEN}[ToneLib-GFX Docker]${NC} Preparando ambiente..."
+info "Usuário dono dos arquivos: $ORIG_USER ($ORIG_UID:$ORIG_GID)"
 
 # ---------------------------------------------------------------------------
-# Docker (instalação/credenciais pedem sudo via lib/prompt.sh)
+# Docker
 # ---------------------------------------------------------------------------
-[ -f "$REPO_DIR/lib/prompt.sh" ] || die "Arquivo lib/prompt.sh não encontrado (clone incompleto?)."
-# shellcheck source=lib/prompt.sh
-. "$REPO_DIR/lib/prompt.sh"
-
 if ! command -v docker > /dev/null 2>&1; then
-    info "Docker não encontrado."
+    info "Docker não encontrado. Instalando via script oficial (get.docker.com)..."
     require_tool curl curl || die "Sem curl não é possível baixar o instalador do Docker."
-
-    # Baixa o instalador para um arquivo para que o comando mostrado no prompt
-    # seja o que de fato roda (nada de 'curl ... | sudo bash' truncado)
     DOCKER_INSTALLER=$(mktemp /tmp/get-docker-XXXXXX.sh)
-    if curl -fsSL https://get.docker.com -o "$DOCKER_INSTALLER" \
-            && ask_sudo "instalar o Docker (script oficial get.docker.com)" sh "$DOCKER_INSTALLER"; then
-        rm -f "$DOCKER_INSTALLER"
-        ok "Docker instalado."
-    else
-        rm -f "$DOCKER_INSTALLER"
-        die "Instale o Docker manualmente: https://docs.docker.com/engine/install/"
-    fi
+    curl -fsSL https://get.docker.com -o "$DOCKER_INSTALLER" \
+        || { rm -f "$DOCKER_INSTALLER"; die "Falha ao baixar https://get.docker.com"; }
+    sh "$DOCKER_INSTALLER" || { rm -f "$DOCKER_INSTALLER"; die "Instalador do Docker falhou."; }
+    rm -f "$DOCKER_INSTALLER"
+    command -v docker > /dev/null 2>&1 || die "Docker não apareceu no PATH após a instalação."
+    ok "Docker instalado."
 fi
 
 if ! docker compose version > /dev/null 2>&1; then
-    info "Plugin 'docker compose' não encontrado."
+    info "Plugin 'docker compose' não encontrado. Instalando..."
     COMPOSE_PKG="docker-compose"
     [ "$(detect_pm || true)" = "dnf" ] && COMPOSE_PKG="docker-compose-plugin"
-    pm_install "$COMPOSE_PKG" || die "Instale o plugin Docker Compose v2 e rode novamente."
+    pm_install "$COMPOSE_PKG" || die "Não foi possível instalar o plugin Docker Compose v2."
 fi
 docker compose version > /dev/null 2>&1 || die "Docker Compose v2 indisponível (plugin 'docker compose')."
 
-# Daemon rodando e usuário com permissão no socket
 if ! docker info > /dev/null 2>&1; then
-    info "Sem acesso ao daemon do Docker."
-    ask_sudo "iniciar e habilitar o serviço docker" systemctl enable --now docker || true
+    info "Daemon do Docker não está acessível. Subindo o serviço..."
+    systemctl enable --now docker || true
+    sleep 2
+    docker info > /dev/null 2>&1 || die "O daemon do Docker não subiu. Veja: journalctl -u docker"
+fi
 
-    if ! docker info > /dev/null 2>&1; then
-        if id -nG "$USER" 2> /dev/null | grep -qw docker; then
-            die "Você está no grupo 'docker' mas sem acesso ao socket. Rode 'newgrp docker' (ou relogue) e tente de novo."
-        fi
-        if ask_sudo "adicionar o usuário $USER ao grupo docker" usermod -aG docker "$USER"; then
-            ok "Usuário $USER adicionado ao grupo docker."
-            die "Rode 'newgrp docker' (ou relogue) e execute ./run.sh de novo."
-        fi
-        die "Sem acesso ao Docker. Rode: sudo usermod -aG docker $USER && newgrp docker"
+# O socket do daemon exige o grupo docker; o script roda como root, então isso
+# só importa para usar o docker depois, sem sudo.
+if [ "$ORIG_UID" != "0" ] && ! id -nG "$ORIG_USER" 2> /dev/null | grep -qw docker; then
+    if usermod -aG docker "$ORIG_USER" 2> /dev/null; then
+        info "Usuário $ORIG_USER adicionado ao grupo docker (vale no próximo login)."
     fi
 fi
 
@@ -104,6 +111,7 @@ download_deb() {
         die "O download não é um .deb válido. Baixe manualmente de https://tonelib.net/gfx-overview/"
     fi
     mv "$tmp" "$DEB_FILE"
+    give_back "$DEB_FILE"
     ok "Download concluído: $DEB_FILE"
     if command -v dpkg-deb > /dev/null 2>&1; then
         info "Versão do pacote: $(dpkg-deb -f "$DEB_FILE" Version)"
@@ -118,17 +126,20 @@ fi
 # X11
 # ---------------------------------------------------------------------------
 info "Permitindo conexões X11..."
+if [ -z "$ORIG_DISPLAY" ]; then
+    die "DISPLAY vazio. Rode o script dentro da sessão gráfica (terminal com X11/Wayland)."
+fi
 xhost +local:docker > /dev/null 2>&1 || {
     echo -e "${YELLOW}[AVISO]${NC} Não foi possível configurar xhost. Interface gráfica pode não funcionar."
 }
 
-# Exportar variáveis de ambiente usadas pelo compose.yml
-export USER_ID=$(id -u)
-export GROUP_ID=$(id -g)
-export DISPLAY="${DISPLAY:-:0}"
+# Variáveis usadas pelo compose.yml (dono real dos arquivos, não o root)
+export USER_ID="$ORIG_UID"
+export GROUP_ID="$ORIG_GID"
+export DISPLAY="$ORIG_DISPLAY"
 
 # Criar diretório home do ToneLib se não existir
-TONELIB_HOME="$HOME/tonelib"
+TONELIB_HOME="$ORIG_HOME/tonelib"
 if [ ! -d "$TONELIB_HOME" ]; then
     echo -e "${GREEN}[SETUP]${NC} Criando diretório ToneLib em $TONELIB_HOME..."
     mkdir -p "$TONELIB_HOME"
@@ -138,6 +149,7 @@ if [ ! -d "$TONELIB_HOME" ]; then
         cp ToneLib-Files-README.md "$TONELIB_HOME/README.md"
     fi
 
+    give_back "$TONELIB_HOME"
     info "Diretório ToneLib criado!"
     info "Gravações estarão em: $TONELIB_HOME/Music/GFX-Recordings"
 fi
@@ -145,8 +157,8 @@ fi
 # ---------------------------------------------------------------------------
 # Build: só quando a imagem não existe ou o .deb local mudou
 # ---------------------------------------------------------------------------
-export TONELIB_DEB_SHA
 TONELIB_DEB_SHA=$(sha256sum "$DEB_FILE" | cut -d' ' -f1)
+export TONELIB_DEB_SHA
 
 IMAGE_SHA=$(docker image inspect -f '{{index .Config.Labels "tonelib.deb.sha256"}}' "$IMAGE" 2> /dev/null || true)
 
