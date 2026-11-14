@@ -23,6 +23,10 @@ O repositório **não contém binários da ToneLib**.
   a maior parte das libs gráficas é inútil aqui).
 - Documentação é **bilíngue**: toda mudança de comportamento vai no `README.md`
   em inglês **e** em português.
+- **Scripts que precisam de root devem pedir autorização**, nunca só morrer com
+  "instale X". Use `lib/prompt.sh` (`ask_sudo`, `require_tool`, `pm_install`):
+  mostra a descrição + o comando `sudo` exato, pergunta `[s/N]`, executa;
+  sem TTY (CI/pipe) imprime o comando e falha em vez de travar.
 
 ## Ambiente: você NÃO tem root
 
@@ -122,6 +126,7 @@ está quebrado.
 | `run.sh` | baixa/valida o `.deb`, reconstrói se o sha256 mudou, sobe o compose |
 | `build-appimage.sh` | `.deb` → AppDir → runtime pinado + squashfs → AppImage |
 | `install-desktop.sh` | gera entradas `.desktop` para AppImage e Docker |
+| `lib/prompt.sh` | prompt de sudo: pergunta antes de instalar pacote/iniciar serviço |
 | `.github/workflows/release.yml` | em tag `v*`: baixa o `.deb`, gera AppImage, publica release |
 
 ## Release

@@ -51,7 +51,7 @@ Requirements: x86_64, glibc ≥ 2.27 (any distro from 2018 onwards), X11 or
 XWayland, a working OpenGL driver, ALSA or PulseAudio.
 
 ```bash
-# build dependency
+# build dependency (the script installs it for you if missing)
 sudo apt install squashfs-tools        # Debian/Ubuntu
 # sudo dnf install squashfs-tools      # Fedora
 # sudo pacman -S squashfs-tools        # Arch
@@ -59,6 +59,11 @@ sudo apt install squashfs-tools        # Debian/Ubuntu
 ./build-appimage.sh
 ./ToneLib-GFX-4.9.5-x86_64.AppImage
 ```
+
+If `squashfs-tools`, `curl` or `xz` are missing, the script shows the exact
+`sudo` command and **asks for permission** before installing it
+(`lib/prompt.sh`). In non-interactive runs (CI, pipes) it does not prompt: it
+prints the command and exits with an error.
 
 `build-appimage.sh` unpacks the `.deb`, adds an `AppRun` wrapper and packs
 everything into a single executable file (runtime + squashfs). It also prints
@@ -95,6 +100,11 @@ newgrp docker
 ```bash
 ./run.sh
 ```
+
+`run.sh` does the same for Docker: if `docker`, the `docker compose` plugin or
+socket access is missing, it shows the `sudo` command and asks for permission
+before running it (installing Docker via get.docker.com, adding your user to the
+`docker` group).
 
 `run.sh` downloads the latest `.deb` from tonelib.net if it is missing, and
 rebuilds the image only when the `.deb` changes (it compares the file's sha256
@@ -188,6 +198,7 @@ tonelib-docker/
 ├── run.sh                      # Docker: download + build + run
 ├── build-appimage.sh           # AppImage: build from the .deb
 ├── install-desktop.sh          # menu entries
+├── lib/prompt.sh               # sudo prompt helper
 ├── AGENTS.md                   # notes for AI/code agents
 └── ToneLib-GFX-amd64.deb       # (you add this, never committed)
 ```
@@ -263,7 +274,7 @@ Requisitos: x86_64, glibc ≥ 2.27 (qualquer distro de 2018 pra cá), X11 ou
 XWayland, driver OpenGL funcionando, ALSA ou PulseAudio.
 
 ```bash
-# dependência de build
+# dependência de build (o script instala para você se faltar)
 sudo apt install squashfs-tools        # Debian/Ubuntu
 # sudo dnf install squashfs-tools      # Fedora
 # sudo pacman -S squashfs-tools        # Arch
@@ -271,6 +282,10 @@ sudo apt install squashfs-tools        # Debian/Ubuntu
 ./build-appimage.sh
 ./ToneLib-GFX-4.9.5-x86_64.AppImage
 ```
+
+Se faltar `squashfs-tools`, `curl` ou `xz`, o script mostra o comando `sudo`
+exato e **pede autorização** antes de instalar (`lib/prompt.sh`). Em execução
+não-interativa (CI, pipes) ele não pergunta: imprime o comando e sai com erro.
 
 O `build-appimage.sh` descompacta o `.deb`, adiciona o wrapper `AppRun` e
 empacota tudo num único executável (runtime + squashfs). No final ele mostra o
@@ -306,6 +321,11 @@ newgrp docker
 ```bash
 ./run.sh
 ```
+
+O `run.sh` faz o mesmo para o Docker: se faltar `docker`, o plugin
+`docker compose` ou acesso ao socket, ele mostra o comando `sudo` e pede
+autorização antes de rodar (instala via get.docker.com, adiciona seu usuário ao
+grupo `docker`).
 
 O `run.sh` baixa o `.deb` mais recente do tonelib.net se ele não existir e
 reconstrói a imagem só quando o `.deb` muda (compara o sha256 do arquivo com
@@ -398,6 +418,7 @@ tonelib-docker/
 ├── run.sh                      # Docker: baixar + buildar + rodar
 ├── build-appimage.sh           # AppImage: gera a partir do .deb
 ├── install-desktop.sh          # entradas no menu
+├── lib/prompt.sh               # prompt de sudo
 ├── AGENTS.md                   # notas para agentes de IA/código
 └── ToneLib-GFX-amd64.deb       # (você adiciona, nunca é commitado)
 ```

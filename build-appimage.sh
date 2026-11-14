@@ -51,14 +51,14 @@ case "${1:-}" in
 esac
 
 # ---------------------------------------------------------------------------
-# Dependências do host
+# Dependências do host (com prompt de sudo — ver lib/prompt.sh)
 # ---------------------------------------------------------------------------
-command -v mksquashfs > /dev/null 2>&1 || die "mksquashfs não encontrado.
-  Debian/Ubuntu: sudo apt install squashfs-tools
-  Fedora:        sudo dnf install squashfs-tools
-  Arch:          sudo pacman -S squashfs-tools"
+[ -f "$REPO_DIR/lib/prompt.sh" ] || die "Arquivo lib/prompt.sh não encontrado (clone incompleto?)."
+# shellcheck source=lib/prompt.sh
+. "$REPO_DIR/lib/prompt.sh"
 
-command -v curl > /dev/null 2>&1 || die "curl não encontrado."
+require_tool mksquashfs squashfs-tools || die "Sem mksquashfs não é possível empacotar o AppImage."
+require_tool curl curl || die "Sem curl não é possível baixar o runtime do AppImage."
 
 # ---------------------------------------------------------------------------
 # .deb de entrada
@@ -84,10 +84,10 @@ deb_member() {  # $1 = prefixo do membro (control. / data.)
 
 tar_flags() {  # $1 = nome do membro; imprime as flags de descompressão
     case "$1" in
-        *.xz) command -v xz > /dev/null 2>&1 || die "Instale 'xz-utils' para descompactar o .deb." ; echo "-J" ;;
+        *.xz) require_tool xz xz || return 1 ; echo "-J" ;;
         *.gz) echo "-z" ;;
         *.bz2) echo "-j" ;;
-        *.zst) command -v zstd > /dev/null 2>&1 || die "Instale 'zstd' para descompactar o .deb." ; echo "--zstd" ;;
+        *.zst) require_tool zstd zstd || return 1 ; echo "--zstd" ;;
         *.tar) echo "" ;;
         *) die "Compressão não suportada no .deb: $1" ;;
     esac
@@ -101,7 +101,7 @@ deb_field() {
         return
     fi
 
-    command -v ar > /dev/null 2>&1 || die "Instale 'dpkg-deb' (dpkg) ou 'ar' (binutils) para ler o .deb."
+    command -v ar > /dev/null 2>&1 || require_tool ar binutils || die "Sem 'ar' não é possível ler o .deb sem dpkg-deb."
     command -v tar > /dev/null 2>&1 || die "tar não encontrado."
 
     member=$(deb_member control.tar)
@@ -127,7 +127,7 @@ mkdir -p "$APP_DIR/usr/bin" "$APP_DIR/usr/share/icons/hicolor/256x256/apps"
 if command -v dpkg-deb > /dev/null 2>&1; then
     dpkg-deb -x "$DEB_FILE" "$APP_DIR"
 else
-    command -v ar > /dev/null 2>&1 || die "Instale 'dpkg-deb' (dpkg) ou 'ar' (binutils)."
+    command -v ar > /dev/null 2>&1 || require_tool ar binutils || die "Sem 'ar' não é possível extrair o .deb sem dpkg-deb."
     member=$(deb_member data.tar)
     ar p "$DEB_FILE" "$member" | tar -x $(tar_flags "$member") -C "$APP_DIR"
 fi

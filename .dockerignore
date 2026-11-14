@@ -12,6 +12,8 @@ run.sh
 *.sh
 # Exceção: permitir entrypoint.sh (necessário no container)
 !entrypoint.sh
+# lib/ só é usada pelos scripts do host
+lib/
 
 # Documentação
 README.md

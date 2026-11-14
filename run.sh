@@ -39,10 +39,54 @@ esac
 
 echo -e "${GREEN}[ToneLib-GFX Docker]${NC} Preparando ambiente..."
 
-export DOCKER_BUILDKIT=1   # o Dockerfile usa RUN --mount=type=bind
+# ---------------------------------------------------------------------------
+# Docker (instalação/credenciais pedem sudo via lib/prompt.sh)
+# ---------------------------------------------------------------------------
+[ -f "$REPO_DIR/lib/prompt.sh" ] || die "Arquivo lib/prompt.sh não encontrado (clone incompleto?)."
+# shellcheck source=lib/prompt.sh
+. "$REPO_DIR/lib/prompt.sh"
 
-command -v docker > /dev/null 2>&1 || die "Docker não encontrado. Instale: https://docs.docker.com/engine/install/"
-docker compose version > /dev/null 2>&1 || die "Docker Compose v2 não encontrado (plugin 'docker compose')."
+if ! command -v docker > /dev/null 2>&1; then
+    info "Docker não encontrado."
+    require_tool curl curl || die "Sem curl não é possível baixar o instalador do Docker."
+
+    # Baixa o instalador para um arquivo para que o comando mostrado no prompt
+    # seja o que de fato roda (nada de 'curl ... | sudo bash' truncado)
+    DOCKER_INSTALLER=$(mktemp /tmp/get-docker-XXXXXX.sh)
+    if curl -fsSL https://get.docker.com -o "$DOCKER_INSTALLER" \
+            && ask_sudo "instalar o Docker (script oficial get.docker.com)" sh "$DOCKER_INSTALLER"; then
+        rm -f "$DOCKER_INSTALLER"
+        ok "Docker instalado."
+    else
+        rm -f "$DOCKER_INSTALLER"
+        die "Instale o Docker manualmente: https://docs.docker.com/engine/install/"
+    fi
+fi
+
+if ! docker compose version > /dev/null 2>&1; then
+    info "Plugin 'docker compose' não encontrado."
+    COMPOSE_PKG="docker-compose"
+    [ "$(detect_pm || true)" = "dnf" ] && COMPOSE_PKG="docker-compose-plugin"
+    pm_install "$COMPOSE_PKG" || die "Instale o plugin Docker Compose v2 e rode novamente."
+fi
+docker compose version > /dev/null 2>&1 || die "Docker Compose v2 indisponível (plugin 'docker compose')."
+
+# Daemon rodando e usuário com permissão no socket
+if ! docker info > /dev/null 2>&1; then
+    info "Sem acesso ao daemon do Docker."
+    ask_sudo "iniciar e habilitar o serviço docker" systemctl enable --now docker || true
+
+    if ! docker info > /dev/null 2>&1; then
+        if id -nG "$USER" 2> /dev/null | grep -qw docker; then
+            die "Você está no grupo 'docker' mas sem acesso ao socket. Rode 'newgrp docker' (ou relogue) e tente de novo."
+        fi
+        if ask_sudo "adicionar o usuário $USER ao grupo docker" usermod -aG docker "$USER"; then
+            ok "Usuário $USER adicionado ao grupo docker."
+            die "Rode 'newgrp docker' (ou relogue) e execute ./run.sh de novo."
+        fi
+        die "Sem acesso ao Docker. Rode: sudo usermod -aG docker $USER && newgrp docker"
+    fi
+fi
 
 # ---------------------------------------------------------------------------
 # Download do .deb oficial
@@ -108,6 +152,8 @@ IMAGE_SHA=$(docker image inspect -f '{{index .Config.Labels "tonelib.deb.sha256"
 
 if [ -z "$IMAGE_SHA" ] || [ "$IMAGE_SHA" != "$TONELIB_DEB_SHA" ]; then
     echo -e "${GREEN}[BUILD]${NC} Construindo imagem Docker..."
+    # O Dockerfile usa RUN --mount=type=bind, que exige BuildKit
+    export DOCKER_BUILDKIT=1
     docker compose build
 else
     info "Imagem já corresponde ao $DEB_FILE local (sha256: ${TONELIB_DEB_SHA:0:12})."
