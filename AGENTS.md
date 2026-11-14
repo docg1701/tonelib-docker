@@ -24,6 +24,36 @@ O repositório **não contém binários da ToneLib**.
 - Documentação é **bilíngue**: toda mudança de comportamento vai no `README.md`
   em inglês **e** em português.
 
+## Ambiente: você NÃO tem root
+
+O agente roda como usuário comum; `sudo` pede senha. **Não invente contorno** para
+falta de permissão ou de pacote — nada de `bwrap`, `unshare`, `debootstrap`,
+`chroot`, `mknod`, rootfs falso em `/tmp` ou container caseiro. Isso gasta tempo e
+suja a máquina.
+
+Se faltar uma ferramenta, **peça ao Galvani** com o pacote Debian exato e o
+comando pronto. Verifique o nome/versão antes, sem root:
+
+```bash
+apt-cache policy squashfs-tools        # Candidato: 1:4.6.1-1
+```
+
+Pacotes por tarefa (Debian 13/trixie, conferidos com `apt-cache policy`):
+
+| Tarefa | Pacotes |
+| --- | --- |
+| Buildar/rodar o AppImage | `squashfs-tools` (dá o `mksquashfs`), `libfuse2t64` para montar via FUSE |
+| Buildar/rodar a imagem Docker | `docker.io`, `docker-compose` (traz o plugin `docker compose`), `docker-buildx` |
+| Inspecionar o binário | `binutils` (`readelf`, `objdump`, `strings`) |
+| Smoke test sem GUI | `xvfb`, `x11-utils` (`xwininfo`), `x11-xserver-utils` (`xhost`) |
+| Ler o `.deb` | `dpkg` (`dpkg-deb`); em outras distros, `binutils` (`ar`) + `xz-utils` |
+
+Depois de instalar o Docker, o usuário precisa entrar no grupo:
+`sudo usermod -aG docker $USER` + relogin (ou `newgrp docker`).
+
+O que **já está** disponível: `curl`, `python3`, `dpkg-deb`, `git`, `gh` (logado
+como `docg1701`), `x11-utils` e `x11-xserver-utils`.
+
 ## Fatos verificados sobre o binário (4.9.5, nov/2026)
 
 Checados com `readelf`/parse de ELF e teste real em rootfs Ubuntu 24.04:
@@ -56,25 +86,31 @@ os dois caminhos — confira o control antes.
 
 ## Como testar
 
+Todos os comandos abaixo rodam nativamente na máquina do Galvani (sem sandbox):
+
 ```bash
-# Docker
+# Docker (precisa de docker.io + docker-compose + docker-buildx)
 docker compose build
-docker compose run --rm tonelib-gfx aplay -l   # container sobe?
+./run.sh
 
-# AppImage (precisa de um .deb local)
+# AppImage (precisa do .deb local + squashfs-tools)
 ./build-appimage.sh
-./ToneLib-GFX-*-x86_64.AppImage                # precisa de X11/XWayland
-APPIMAGE_EXTRACT_AND_RUN=1 ./ToneLib-GFX-*.AppImage   # sem FUSE
+./ToneLib-GFX-*-x86_64.AppImage                # na sessão gráfica real
 
-# Smoke test sem GUI (útil em CI/headless): Xvfb + xwininfo
+# Smoke test headless (precisa de xvfb + x11-utils)
 Xvfb :99 -screen 0 1280x800x24 & DISPLAY=:99 ./ToneLib-GFX-*.AppImage &
 DISPLAY=:99 xwininfo -root -tree | grep 'ToneLib GFX'
 ```
 
+O CI (`.github/workflows/release.yml`) faz build + smoke test do AppImage **e**
+da imagem Docker a cada tag. Rodar `gh workflow run release.yml --ref <branch>`
+valida as duas pernas sem publicar release (os passos de release só rodam em tag).
+
 Sintoma clássico em teste headless: `Xvfb` que não sobe por causa de
 `/tmp/.X99-lock` antigo — o app então sai com código 1 sem mensagem clara.
-Remova o lock (`rm -f /tmp/.X99-lock /tmp/.X11-unix/X99`) antes de concluir que
-o empacotamento está quebrado.
+Remova o lock (`rm -f /tmp/.X99-lock /tmp/.X11-unix/X99`; o `X99` está no dono
+`galvani`, então não precisa de root) antes de concluir que o empacotamento
+está quebrado.
 
 ## Mapa dos arquivos
 
