@@ -57,7 +57,7 @@ sudo apt install squashfs-tools        # Debian/Ubuntu
 # sudo pacman -S squashfs-tools        # Arch
 
 ./build-appimage.sh
-./ToneLib-GFX-4.9.5-x86_64.AppImage
+./ToneLib-GFX-amd64.AppImage
 ```
 
 Run the script from a normal user: it asks for your `sudo` password and from
@@ -82,7 +82,7 @@ If FUSE is not available (e.g. some containers, or Ubuntu 24.04 without
 `libfuse2t64`):
 
 ```bash
-APPIMAGE_EXTRACT_AND_RUN=1 ./ToneLib-GFX-4.9.5-x86_64.AppImage
+APPIMAGE_EXTRACT_AND_RUN=1 ./ToneLib-GFX-amd64.AppImage
 ```
 
 The VST/VST3 plugins from the `.deb` are **not** included in the AppImage —
@@ -158,6 +158,22 @@ buffer at 128 samples.
 
 ### Troubleshooting
 
+#### Terminal shows JACK / xprop messages
+
+The app always probes JACK at startup and calls `xprop` looking for an
+already-open window, so every launch prints lines like:
+
+```
+Cannot connect to server socket err = No such file or directory
+jack server is not running or cannot be started
+JackShmReadWritePtr::~JackShmReadWritePtr - Init not done for -1, skipping unlock
+xprop: error: No window with name ToneLib GFX exists!
+```
+
+They are harmless — the window opens right after. This project does not filter
+or suppress the app's output; if you want a quiet terminal, redirect it yourself
+(`./ToneLib-GFX-amd64.AppImage 2>/dev/null`) or start a JACK server on the host.
+
 #### Application doesn't open (Docker)
 ```bash
 xhost +local:docker
@@ -166,7 +182,7 @@ xhost +local:docker
 #### AppImage won't mount
 ```bash
 sudo apt install libfuse2t64            # Debian/Ubuntu 24.04
-APPIMAGE_EXTRACT_AND_RUN=1 ./ToneLib-GFX-*.AppImage
+APPIMAGE_EXTRACT_AND_RUN=1 ./ToneLib-GFX-amd64.AppImage
 ```
 
 #### No audio
@@ -283,7 +299,7 @@ sudo apt install squashfs-tools        # Debian/Ubuntu
 # sudo pacman -S squashfs-tools        # Arch
 
 ./build-appimage.sh
-./ToneLib-GFX-4.9.5-x86_64.AppImage
+./ToneLib-GFX-amd64.AppImage
 ```
 
 Execute o script como usuário normal: ele pede a senha do `sudo` e, a partir
@@ -307,7 +323,7 @@ então essas ficam no host (prática padrão).
 Se não houver FUSE (containers, ou Ubuntu 24.04 sem `libfuse2t64`):
 
 ```bash
-APPIMAGE_EXTRACT_AND_RUN=1 ./ToneLib-GFX-4.9.5-x86_64.AppImage
+APPIMAGE_EXTRACT_AND_RUN=1 ./ToneLib-GFX-amd64.AppImage
 ```
 
 Os plugins VST/VST3 do `.deb` **não** entram no AppImage — uma DAW precisa deles
@@ -382,6 +398,22 @@ samples.
 
 ### Troubleshooting
 
+#### Terminal mostra mensagens de JACK / xprop
+
+O app sempre testa o JACK na inicialização e chama `xprop` procurando uma janela
+já aberta, então todo start imprime linhas como:
+
+```
+Cannot connect to server socket err = Arquivo ou diretório inexistente
+jack server is not running or cannot be started
+JackShmReadWritePtr::~JackShmReadWritePtr - Init not done for -1, skipping unlock
+xprop: error: No window with name ToneLib GFX exists!
+```
+
+São inofensivas — a janela abre em seguida. Este projeto não filtra nem esconde
+a saída do app; para um terminal silencioso, redirecione você mesmo
+(`./ToneLib-GFX-amd64.AppImage 2>/dev/null`) ou suba um servidor JACK no host.
+
 #### Aplicativo não abre (Docker)
 ```bash
 xhost +local:docker
@@ -390,7 +422,7 @@ xhost +local:docker
 #### AppImage não monta
 ```bash
 sudo apt install libfuse2t64            # Debian/Ubuntu 24.04
-APPIMAGE_EXTRACT_AND_RUN=1 ./ToneLib-GFX-*.AppImage
+APPIMAGE_EXTRACT_AND_RUN=1 ./ToneLib-GFX-amd64.AppImage
 ```
 
 #### Sem áudio

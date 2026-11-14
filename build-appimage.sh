@@ -52,7 +52,7 @@ case "${1:-}" in
         echo ""
         echo "  --download  baixa o .deb de tonelib.net se ele não estiver no diretório"
         echo ""
-        echo "Gera ToneLib-GFX-<versão>-x86_64.AppImage."
+        echo "Gera ToneLib-GFX-amd64.AppImage (mesmo nome-base do .deb oficial)."
         echo "O script pede a senha do sudo e roda como root (instala squashfs-tools/curl se faltar)."
         exit 0
         ;;
@@ -123,7 +123,7 @@ DEB_VERSION="$(deb_field Version)"
 [ -n "$DEB_VERSION" ] || die "Não consegui ler a versão do .deb."
 # Version do dpkg é "4.9-5" (revisão Debian); o app é 4.9.5
 APP_VERSION="${DEB_VERSION//-/.}"
-OUTPUT_NAME="ToneLib-GFX-${APP_VERSION}-x86_64.AppImage"
+OUTPUT_NAME="ToneLib-GFX-amd64.AppImage"   # mesmo padrão do .deb (ToneLib-GFX-amd64.deb)
 
 info "Versão do pacote: $DEB_VERSION (app $APP_VERSION)"
 
@@ -184,6 +184,8 @@ export QT_X11_NO_MITSHM=1
 export QT_LOGGING_RULES="*.debug=false"
 export PULSE_LATENCY_MSEC="${PULSE_LATENCY_MSEC:-20}"
 
+# Saída do app vai direto para o terminal, sem filtro (mensagens de JACK ausente
+# e do xprop fazem parte do comportamento normal do ToneLib).
 exec "$HERE/usr/bin/ToneLib-GFX" "$@"
 EOF
 chmod +x "$APP_DIR/AppRun"
@@ -227,7 +229,7 @@ rm -rf "$BUILD_DIR"
 give_back "$CACHE_DIR"
 give_back "$REPO_DIR/$OUTPUT_NAME"
 
-ok "AppImage gerado: $REPO_DIR/$OUTPUT_NAME"
+ok "AppImage gerado: $REPO_DIR/$OUTPUT_NAME (versão $APP_VERSION)"
 info "Tamanho: $(du -h "$REPO_DIR/$OUTPUT_NAME" | cut -f1)"
 info "sha256:  $(sha256sum "$REPO_DIR/$OUTPUT_NAME" | cut -d' ' -f1)"
 echo ""

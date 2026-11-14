@@ -14,6 +14,10 @@ O repositório **não contém binários da ToneLib**.
 
 ## Regras invioláveis
 
+- **Nunca filtre/esconda a saída do ToneLib** (decisão do Galvani). Nada de
+  wrapper com `grep -v`, `2>/dev/null` embutido ou "é só ruído". As mensagens de
+  JACK ausente e do `xprop` no start são normais e devem aparecer no terminal;
+  documente (README → Troubleshooting), não oculte.
 - **Nunca commite** `ToneLib-GFX-amd64.deb`, `*.AppImage`, `build/` ou `.cache/`.
   São binários proprietários da ToneLib; a licença não permite redistribuição.
   O `.gitignore` já cobre todos eles — não o contorne.
@@ -106,10 +110,10 @@ docker compose build
 
 # AppImage (precisa do .deb local + squashfs-tools)
 ./build-appimage.sh
-./ToneLib-GFX-*-x86_64.AppImage                # na sessão gráfica real
+./ToneLib-GFX-amd64.AppImage                # na sessão gráfica real
 
 # Smoke test headless (precisa de xvfb + x11-utils)
-Xvfb :99 -screen 0 1280x800x24 & DISPLAY=:99 ./ToneLib-GFX-*.AppImage &
+Xvfb :99 -screen 0 1280x800x24 & DISPLAY=:99 ./ToneLib-GFX-amd64.AppImage &
 DISPLAY=:99 xwininfo -root -tree | grep 'ToneLib GFX'
 ```
 

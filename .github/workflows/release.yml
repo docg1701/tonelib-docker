@@ -30,9 +30,13 @@ jobs:
           chmod +x build-appimage.sh
           ./build-appimage.sh --download
 
-          APPIMAGE=$(ls -1 ToneLib-GFX-*-x86_64.AppImage | head -1)
+          APPIMAGE="ToneLib-GFX-amd64.AppImage"
+          [ -x "$APPIMAGE" ] || { echo "::error::build-appimage.sh não gerou $APPIMAGE"; exit 1; }
           echo "appimage=$APPIMAGE" >> "$GITHUB_OUTPUT"
-          echo "version=$(echo "$APPIMAGE" | sed -E 's/^ToneLib-GFX-(.*)-x86_64\.AppImage$/\1/')" >> "$GITHUB_OUTPUT"
+
+          # Versão vem do .deb ("4.9-5" -> "4.9.5"), não do nome do arquivo
+          DEB_VERSION=$(dpkg-deb -f ToneLib-GFX-amd64.deb Version)
+          echo "version=${DEB_VERSION//-/.}" >> "$GITHUB_OUTPUT"
 
       - name: Check tag matches package version
         if: startsWith(github.ref, 'refs/tags/v')
@@ -124,7 +128,7 @@ jobs:
              \`\`\`bash
              sudo apt install squashfs-tools
              ./build-appimage.sh
-             ./ToneLib-GFX-${{ steps.build.outputs.version }}-x86_64.AppImage
+             ./ToneLib-GFX-amd64.AppImage
              \`\`\`
              Ou rode direto no Docker: \`./run.sh\`
 

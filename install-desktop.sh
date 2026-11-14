@@ -16,7 +16,7 @@ mkdir -p "$INSTALL_DIR"
 # ---------------------------------------------------------------------------
 # AppImage (preferido, se já foi gerado com ./build-appimage.sh)
 # ---------------------------------------------------------------------------
-APPIMAGE=$(ls -1 "$REPO_DIR"/ToneLib-GFX-*-x86_64.AppImage 2> /dev/null | head -1 || true)
+APPIMAGE=$(ls -1 "$REPO_DIR"/ToneLib-GFX-amd64.AppImage 2> /dev/null | head -1 || true)
 
 if [ -n "$APPIMAGE" ]; then
     cat > "$INSTALL_DIR/tonelib-gfx-appimage.desktop" <<EOF

@@ -32,4 +32,5 @@ fi
 echo -e "${GREEN}[START]${NC} Iniciando ToneLib-GFX..."
 echo ""
 
+# Iniciar ToneLib-GFX (saída vai direto para o terminal, sem filtro)
 exec /usr/bin/ToneLib-GFX "$@"

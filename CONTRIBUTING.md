@@ -85,7 +85,7 @@ docker compose build --no-cache
 
 # Testar o AppImage (precisa do .deb na raiz)
 ./build-appimage.sh
-./ToneLib-GFX-*-x86_64.AppImage
+./ToneLib-GFX-amd64.AppImage
 
 # Testar instalação do ícone
 ./install-desktop.sh
