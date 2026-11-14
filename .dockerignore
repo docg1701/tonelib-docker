@@ -17,6 +17,12 @@ run.sh
 README.md
 *.md
 
+# Artefatos de build
+*.AppImage
+build/
+.cache/
+.github/
+
 # Arquivos temporários
 *.log
 *.tmp

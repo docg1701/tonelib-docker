@@ -5,6 +5,9 @@ services:
       args:
         USER_ID: ${USER_ID:-1000}
         GROUP_ID: ${GROUP_ID:-1000}
+        # run.sh exporta o sha256 do .deb local; o Dockerfile grava como label
+        # para saber quando a imagem precisa ser reconstruída
+        TONELIB_DEB_SHA: ${TONELIB_DEB_SHA:-unknown}
     image: tonelib-gfx:latest
     container_name: tonelib-gfx
 
@@ -16,7 +19,7 @@ services:
       # Configuração PulseAudio
       - PULSE_SERVER=unix:/run/user/${USER_ID:-1000}/pulse/native
       - PULSE_LATENCY_MSEC=20
-      # Configuração JACK (se disponível)
+      # Configuração JACK (se disponível no host)
       - JACK_DEFAULT_SERVER=default
       # Configuração OpenGL
       - LIBGL_ALWAYS_SOFTWARE=0
@@ -29,7 +32,7 @@ services:
       # Socket PulseAudio para áudio
       - /run/user/${USER_ID:-1000}/pulse:/run/user/${USER_ID:-1000}/pulse:ro
 
-      # Socket JACK para áudio de baixa latência (se disponível)
+      # Socket JACK e memória compartilhada (baixa latência)
       - /dev/shm:/dev/shm
 
       # Diretório home do ToneLib (arquivos, gravações, backing tracks, IRs, presets)
