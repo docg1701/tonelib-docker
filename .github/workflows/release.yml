@@ -128,15 +128,16 @@ jobs:
           2. Clone este repositório e coloque o \`.deb\` na raiz
           3. Gere o AppImage:
              \`\`\`bash
-             sudo apt install squashfs-tools
-             ./build-appimage.sh
+             ./build-appimage.sh          # --download baixa o .deb se faltar
              ./ToneLib-GFX-amd64.AppImage
              \`\`\`
-             Ou rode direto no Docker: \`./run.sh\`
+             Ou use Docker: \`./run.sh\`
 
-          O build desta release foi validado no CI (Ubuntu 24.04, smoke test com Xvfb).
+          Os scripts pedem a senha do sudo e instalam \`squashfs-tools\`/\`curl\` se faltar.
+          Build desta release validado no CI (Ubuntu 24.04, smoke test com Xvfb + imagem Docker).
 
-          Requisitos: x86_64, glibc >= 2.27, X11 ou XWayland, driver OpenGL, ALSA ou PulseAudio."
+          Requisitos: x86_64, glibc >= 2.27, X11 ou XWayland, driver OpenGL, ALSA ou PulseAudio.
+          Sem FUSE: \`APPIMAGE_EXTRACT_AND_RUN=1 ./ToneLib-GFX-amd64.AppImage\`"
 
           if gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
             gh release edit "$GITHUB_REF_NAME" --notes "$NOTES"
