@@ -1,0 +1,116 @@
+name: Release
+
+# Em push de tag v*: baixa o .deb oficial, valida que build-appimage.sh funciona
+# com a versão publicada e cria a release (sem binários anexados).
+#
+# O AppImage NÃO é publicado aqui de propósito: ToneLib-GFX é proprietário e a
+# licença não permite redistribuição. Cada usuário gera o binário localmente com
+# ./build-appimage.sh a partir do .deb oficial.
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  appimage:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends squashfs-tools curl file
+
+      - name: Download ToneLib-GFX .deb
+        run: |
+          curl -fL --retry 3 --connect-timeout 20 \
+            -o ToneLib-GFX-amd64.deb \
+            "https://tonelib.net/download.php?id=gfx&os=lnx"
+          if [ "$(head -c 8 ToneLib-GFX-amd64.deb)" != '!<arch>' ]; then
+            echo "::error::O download não é um .deb válido"
+            exit 1
+          fi
+          echo "Versão do pacote: $(dpkg-deb -f ToneLib-GFX-amd64.deb Version)"
+
+      - name: Build AppImage
+        id: build
+        run: |
+          chmod +x build-appimage.sh
+          ./build-appimage.sh
+
+          APPIMAGE=$(ls -1 ToneLib-GFX-*-x86_64.AppImage | head -1)
+          echo "appimage=$APPIMAGE" >> "$GITHUB_OUTPUT"
+          echo "version=$(echo "$APPIMAGE" | sed -E 's/^ToneLib-GFX-(.*)-x86_64\.AppImage$/\1/')" >> "$GITHUB_OUTPUT"
+
+      - name: Check tag matches package version
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          PKG_VERSION="${{ steps.build.outputs.version }}"
+          echo "tag=$TAG_VERSION pacote=$PKG_VERSION"
+          if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
+            echo "::error::A tag $GITHUB_REF_NAME não corresponde à versão publicada ($PKG_VERSION)."
+            exit 1
+          fi
+
+      - name: Smoke test (headless)
+        run: |
+          sudo apt-get install -y --no-install-recommends xvfb x11-utils libgl1-mesa-dri \
+            libasound2t64 libpulse0 libx11-6 libxext6 libxinerama1 libxcursor1 \
+            libxrandr2 libxrender1 libxss1 libfontconfig1 libfreetype6 libcurl3t64-gnutls
+          export DISPLAY=:99
+          Xvfb :99 -screen 0 1280x800x24 &
+          sleep 3
+          APPIMAGE="${{ steps.build.outputs.appimage }}"
+          APPIMAGE_EXTRACT_AND_RUN=1 "./$APPIMAGE" > appimage.log 2>&1 &
+          APP_PID=$!
+          for i in $(seq 1 12); do
+            sleep 5
+            if xwininfo -root -tree | grep -q 'ToneLib GFX'; then
+              echo "Janela criada após $((i*5))s"
+              xwininfo -root -tree | grep 'ToneLib GFX'
+              kill "$APP_PID" || true
+              exit 0
+            fi
+          done
+          echo "::error::O AppImage não abriu nenhuma janela"
+          tail -30 appimage.log
+          kill "$APP_PID" || true
+          exit 1
+
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          NOTES="ToneLib-GFX ${{ steps.build.outputs.version }} — scripts atualizados para esta versão.
+
+          Esta release **não inclui binários**: ToneLib-GFX é proprietário e não é redistribuído aqui.
+
+          ## Como obter o app
+
+          1. Baixe \`ToneLib-GFX-amd64.deb\` (Ubuntu 64-bit) em https://tonelib.net/gfx-overview/
+          2. Clone este repositório e coloque o \`.deb\` na raiz
+          3. Gere o AppImage:
+             \`\`\`bash
+             sudo apt install squashfs-tools
+             ./build-appimage.sh
+             ./ToneLib-GFX-${{ steps.build.outputs.version }}-x86_64.AppImage
+             \`\`\`
+             Ou rode direto no Docker: \`./run.sh\`
+
+          O build desta release foi validado no CI (Ubuntu 24.04, smoke test com Xvfb).
+
+          Requisitos: x86_64, glibc >= 2.27, X11 ou XWayland, driver OpenGL, ALSA ou PulseAudio."
+
+          if gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
+            gh release edit "$GITHUB_REF_NAME" --notes "$NOTES"
+          else
+            gh release create "$GITHUB_REF_NAME" --title "ToneLib-GFX ${{ steps.build.outputs.version }}" --notes "$NOTES"
+          fi
