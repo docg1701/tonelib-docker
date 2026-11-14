@@ -1,32 +1,71 @@
 #!/bin/bash
 
-# Script para instalar o ToneLib-GFX no menu de aplicativos
+# Instala o ToneLib-GFX no menu de aplicativos.
+# Gera entradas para o AppImage (se existir) e para o Docker.
 
 set -e
 
-DESKTOP_FILE="ToneLib-GFX-Docker.desktop"
+REPO_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 INSTALL_DIR="$HOME/.local/share/applications"
+ICON_PATH="$REPO_DIR/tonelib-icon.png"
 
 echo "=== Instalando ToneLib-GFX no menu de aplicativos ==="
 
-# Criar diretório se não existir
 mkdir -p "$INSTALL_DIR"
 
-# Copiar arquivo .desktop
-cp "$DESKTOP_FILE" "$INSTALL_DIR/"
+# ---------------------------------------------------------------------------
+# AppImage (preferido, se já foi gerado com ./build-appimage.sh)
+# ---------------------------------------------------------------------------
+APPIMAGE=$(ls -1 "$REPO_DIR"/ToneLib-GFX-*-x86_64.AppImage 2> /dev/null | head -1 || true)
 
-# Tornar executável
-chmod +x "$INSTALL_DIR/$DESKTOP_FILE"
+if [ -n "$APPIMAGE" ]; then
+    cat > "$INSTALL_DIR/tonelib-gfx-appimage.desktop" <<EOF
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=ToneLib GFX
+Comment=Amp and effects modeling software for guitar and bass
+Exec="$APPIMAGE"
+Path=$REPO_DIR
+Icon=$ICON_PATH
+Terminal=false
+Categories=AudioVideo;Audio;
+StartupNotify=true
+StartupWMClass=ToneLib GFX
+EOF
+    chmod +x "$INSTALL_DIR/tonelib-gfx-appimage.desktop"
+    echo "✅ Entrada do AppImage instalada: $(basename "$APPIMAGE")"
+else
+    echo "ℹ️  Nenhum AppImage encontrado (rode ./build-appimage.sh para gerar um)."
+fi
+
+# ---------------------------------------------------------------------------
+# Docker
+# ---------------------------------------------------------------------------
+cat > "$INSTALL_DIR/tonelib-gfx-docker.desktop" <<EOF
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=ToneLib GFX (Docker)
+Comment=Amp and effects modeling software for guitar and bass
+Exec=$REPO_DIR/run.sh
+Path=$REPO_DIR
+Icon=$ICON_PATH
+Terminal=false
+Categories=AudioVideo;Audio;
+StartupNotify=true
+StartupWMClass=ToneLib GFX
+EOF
+chmod +x "$INSTALL_DIR/tonelib-gfx-docker.desktop"
+echo "✅ Entrada do Docker instalada: run.sh"
 
 # Atualizar cache do menu
 if command -v update-desktop-database &> /dev/null; then
     update-desktop-database "$INSTALL_DIR"
 fi
 
-echo "✅ ToneLib-GFX instalado com sucesso!"
 echo ""
-echo "Você pode encontrar o aplicativo no menu:"
-echo "  Menu → Som e Vídeo → ToneLib GFX (Docker)"
+echo "Os aplicativos aparecem no menu em: Menu → Som e Vídeo"
 echo ""
-echo "Para desinstalar, execute:"
-echo "  rm $INSTALL_DIR/$DESKTOP_FILE"
+echo "Para desinstalar:"
+echo "  rm $INSTALL_DIR/tonelib-gfx-appimage.desktop $INSTALL_DIR/tonelib-gfx-docker.desktop"

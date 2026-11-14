@@ -1,5 +1,11 @@
-# Arquivo .deb (não distribuir por questões de licença)
+# Binários da ToneLib (não distribuir por questões de licença)
 *.deb
+*.deb.part
+*.AppImage
+
+# Saída do build-appimage.sh
+build/
+.cache/
 
 # Volumes Docker
 .docker/
