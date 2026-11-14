@@ -53,8 +53,10 @@ Exemplo:
 - Mantenha camadas otimizadas (minimize número de layers)
 - Comente alterações não óbvias
 - Minimize tamanho da imagem
+- O `.deb` entra por `RUN --mount=type=bind` (não `COPY`), para não deixar ~100 MB numa camada
+- Base é Ubuntu 24.04: o `.deb` é extraído com `dpkg-deb -x`, porque o `Depends` dele é obsoleto (veja `AGENTS.md`)
 
-#### Scripts (run.sh, install-desktop.sh)
+#### Scripts (run.sh, build-appimage.sh, install-desktop.sh)
 - Use `#!/bin/bash` no shebang
 - Adicione `set -e` para falhar em erros
 - Mensagens de erro claras
@@ -81,12 +83,16 @@ docker compose build --no-cache
 # Testar execução
 ./run.sh
 
+# Testar o AppImage (precisa do .deb na raiz)
+./build-appimage.sh
+./ToneLib-GFX-*-x86_64.AppImage
+
 # Testar instalação do ícone
 ./install-desktop.sh
 ```
 
 Verifique:
-- ✅ Aplicativo abre corretamente
+- ✅ Aplicativo abre corretamente (Docker e AppImage)
 - ✅ Interface gráfica sem corrupção
 - ✅ Áudio funciona
 - ✅ Configurações persistem entre execuções
@@ -102,14 +108,18 @@ Atualizações no README são muito bem-vindas! Especialmente:
 
 ### O Que NÃO Fazer
 
-❌ **NÃO inclua o arquivo .deb no repositório**
-- Por questões de licenciamento, o ToneLib-GFX.deb não pode ser distribuído aqui
-
-❌ **NÃO modifique o binário do ToneLib-GFX**
-- Este projeto apenas facilita a execução, não modifica o software
+❌ **NÃO inclua binários da ToneLib no repositório**
+- Por questões de licenciamento, nem o `.deb` nem o `.AppImage` podem ser
+  commitados aqui. O `.gitignore` cobre os dois; gere o AppImage localmente com
+  `./build-appimage.sh`
 
 ❌ **NÃO adicione dependências desnecessárias**
 - Mantenha a imagem leve
+- `qtbase5-dev`, `libqt5*`, `libgtk-3-0`, `jackd2` e `qjackctl` não são usados
+  pelo binário (Qt5 é estático) — veja os fatos verificados em `AGENTS.md`
+
+❌ **NÃO modifique o binário do ToneLib-GFX**
+- Este projeto apenas facilita a execução, não modifica o software
 
 ## Código de Conduta
 

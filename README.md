@@ -1,4 +1,4 @@
-# 🎸 ToneLib-GFX Docker
+# 🎸 ToneLib-GFX — Docker + AppImage
 
 [English](#english) | [Português](#português)
 
@@ -6,22 +6,80 @@
 
 ## English
 
-Run **ToneLib-GFX** on modern Linux distributions using Docker.
+Run **ToneLib-GFX 4.9.5** on modern Linux distributions — either as a standalone
+**AppImage** built locally from the official `.deb`, or inside a **Docker** container.
 
 ### The Problem
 
-ToneLib-GFX `.deb` package depends on libraries that no longer exist on Ubuntu 22.04+, Linux Mint 21+, Debian 12+:
+The official ToneLib-GFX `.deb` declares dependencies that no longer exist on
+Ubuntu 22.04+/24.04, Linux Mint 21+, Debian 12+:
 
 ```
 Package libgl1-mesa-glx is not installable
 Package libcurl3-gnutls is not installable
+Package libgcc1 is not installable
 ```
 
-### The Solution
+`dpkg -i ToneLib-GFX-amd64.deb` therefore fails with unmet dependencies. The
+binary itself does not need any of those libraries: it ships a **statically
+linked Qt5** and only loads `libc`, `libm`, `libasound`, `libGL`,
+`libfontconfig` and `libfreetype` (everything else — X11, `libcurl-gnutls`,
+`libjack` — is loaded with `dlopen` at runtime).
 
-Docker container with Ubuntu 20.04 that has all the necessary dependencies.
+### License note
 
-### Installation
+ToneLib-GFX is proprietary. This repository **does not distribute the `.deb`,
+the AppImage or any ToneLib binary** — it only contains configuration and build
+scripts. You download the `.deb` from the official site yourself and build
+locally.
+
+### Download ToneLib-GFX
+
+Get `ToneLib-GFX-amd64.deb` (Ubuntu 64-bit) from the
+[official site](https://tonelib.net/gfx-overview/) and put it in the repository
+root.
+
+```bash
+git clone https://github.com/docg1701/tonelib-docker.git
+cd tonelib-docker
+mv ~/Downloads/ToneLib-GFX-amd64.deb .
+```
+
+### Option 1 — AppImage (no Docker)
+
+Requirements: x86_64, glibc ≥ 2.27 (any distro from 2018 onwards), X11 or
+XWayland, a working OpenGL driver, ALSA or PulseAudio.
+
+```bash
+# build dependency
+sudo apt install squashfs-tools        # Debian/Ubuntu
+# sudo dnf install squashfs-tools      # Fedora
+# sudo pacman -S squashfs-tools        # Arch
+
+./build-appimage.sh
+./ToneLib-GFX-4.9.5-x86_64.AppImage
+```
+
+`build-appimage.sh` unpacks the `.deb`, adds an `AppRun` wrapper and packs
+everything into a single executable file (runtime + squashfs). It also prints
+the size and sha256 of the result.
+
+What is inside the AppImage: the ToneLib binary, icons and desktop entry.
+What comes from the host: glibc, X11/XWayland, the OpenGL driver and the audio
+stack. Bundling glibc, `libGL` or `libX11` is what breaks AppImages, so those
+are intentionally left to the host (standard AppImage practice).
+
+If FUSE is not available (e.g. some containers, or Ubuntu 24.04 without
+`libfuse2t64`):
+
+```bash
+APPIMAGE_EXTRACT_AND_RUN=1 ./ToneLib-GFX-4.9.5-x86_64.AppImage
+```
+
+The VST/VST3 plugins from the `.deb` are **not** included in the AppImage —
+a DAW needs them on the real filesystem, not inside a squashfs.
+
+### Option 2 — Docker
 
 #### 1. Install Docker
 
@@ -32,25 +90,19 @@ sudo usermod -aG docker $USER
 newgrp docker
 ```
 
-#### 2. Download ToneLib-GFX
-
-Download the `.deb` file from the [official website](https://tonelib.net/gfx-overview/).
-
-#### 3. Clone and prepare
-
-```bash
-git clone https://github.com/docg1701/tonelib-docker.git
-cd tonelib-docker
-mv ~/Downloads/ToneLib-GFX-amd64.deb .
-```
-
-#### 4. Run
+#### 2. Run
 
 ```bash
 ./run.sh
 ```
 
-Done! The application opens with GUI and working audio.
+`run.sh` downloads the latest `.deb` from tonelib.net if it is missing, and
+rebuilds the image only when the `.deb` changes (it compares the file's sha256
+with an image label). To fetch a newer ToneLib release:
+
+```bash
+./run.sh --update
+```
 
 ### Add to Menu
 
@@ -58,69 +110,63 @@ Done! The application opens with GUI and working audio.
 ./install-desktop.sh
 ```
 
-Will appear in: Menu → Multimedia → ToneLib GFX (Docker)
+Creates entries for the AppImage (if built) and for Docker in
+Menu → Sound & Video.
 
 ### Shared Folder
 
-The entire ToneLib home directory `~/tonelib/` is shared with the container.
+The entire ToneLib home directory `~/tonelib/` is used (Docker: mounted into the
+container; AppImage: the app writes there natively), so files are the same
+whichever way you run it.
 
 **Useful directories:**
-- `~/tonelib/` - Add your backing tracks, IRs, presets here
-- `~/tonelib/Music/GFX-Recordings/` - Your recordings will be saved here
-- All files are directly accessible from ToneLib-GFX
+- `~/tonelib/` — backing tracks, IRs, NAM profiles, presets
+- `~/tonelib/Music/GFX-Recordings/` — your recordings
 
 ```bash
-# Example: Add backing tracks
-cp ~/Downloads/*.mp3 ~/tonelib/
-
-# Example: Access recordings
-ls ~/tonelib/Music/GFX-Recordings/
+cp ~/Downloads/*.mp3 ~/tonelib/          # add backing tracks
+ls ~/tonelib/Music/GFX-Recordings/       # access recordings
 ```
 
 ### Audio Latency
 
-The container automatically detects and configures the best available audio backend:
+#### 🎯 PulseAudio (default)
+- **Latency:** ~10-20ms
+- **Setup:** works out of the box (`PULSE_LATENCY_MSEC=20`)
+- **Buffer:** 128-256 samples in ToneLib-GFX
 
-#### 🎯 PulseAudio (Default)
-- **Latency:** ~10-20ms total
-- **Setup:** Works out of the box
-- **Best for:** Home practice, jamming along tracks
-- **Configuration:** Buffer size 128-256 samples in ToneLib-GFX
+#### ⚡ JACK (low latency)
+- **Latency:** ~3-5ms
+- **Setup:** install `jackd2` on the host and start it before the app
+- **Docker:** the JACK socket and `/dev/shm` are already shared with the container
 
-#### ⚡ JACK Audio (Low Latency)
-- **Latency:** ~3-5ms total
-- **Setup:** Install JACK on host and start before running container
-- **Best for:** Real-time playing, recording
-- **Auto-detected:** Container switches to JACK automatically if available
-
-**Tips for best performance:**
-- Use dedicated USB audio interface (not onboard)
-- Close other audio applications
-- For JACK: Install `jackd2` and `qjackctl` on your host system
-- Adjust buffer size in ToneLib-GFX settings (128 samples recommended)
+**Tips:** use a dedicated USB audio interface, close other audio apps, keep the
+buffer at 128 samples.
 
 ### Troubleshooting
 
-#### Application doesn't open
-
+#### Application doesn't open (Docker)
 ```bash
 xhost +local:docker
 ```
 
-#### No audio
+#### AppImage won't mount
+```bash
+sudo apt install libfuse2t64            # Debian/Ubuntu 24.04
+APPIMAGE_EXTRACT_AND_RUN=1 ./ToneLib-GFX-*.AppImage
+```
 
+#### No audio
 ```bash
 pulseaudio --check || pulseaudio --start
 ```
 
 #### Check audio interface
-
 ```bash
 docker compose run --rm tonelib-gfx aplay -l
 ```
 
 #### Clean and rebuild
-
 ```bash
 docker compose down
 docker rmi tonelib-gfx:latest
@@ -130,23 +176,32 @@ docker compose build --no-cache
 ### Structure
 
 ```
-~/tonelib/                      # ToneLib home directory (created automatically)
+~/tonelib/                      # ToneLib home (created on first run)
   ├── Music/
-  │   └── GFX-Recordings/      # Your recordings
-  └── (your backing tracks, IRs, presets)
+  │   └── GFX-Recordings/       # your recordings
+  └── (backing tracks, IRs, NAM profiles, presets)
 
 tonelib-docker/
-├── Dockerfile
+├── Dockerfile                  # Ubuntu 24.04 image
 ├── compose.yml
-├── entrypoint.sh
-├── run.sh
-├── install-desktop.sh
-└── ToneLib-GFX-amd64.deb       # (you add this)
+├── entrypoint.sh               # container entrypoint
+├── run.sh                      # Docker: download + build + run
+├── build-appimage.sh           # AppImage: build from the .deb
+├── install-desktop.sh          # menu entries
+├── AGENTS.md                   # notes for AI/code agents
+└── ToneLib-GFX-amd64.deb       # (you add this, never committed)
 ```
 
-### Why Ubuntu 20.04?
+### Why Ubuntu 24.04?
 
-Last LTS release with `libgl1-mesa-glx` and `libcurl3-gnutls`. Newer versions removed these packages.
+The `.deb` cannot be installed with `dpkg -i` on anything newer than 22.04
+because of its obsolete `Depends`. Since the binary is a static Qt5 build that
+does not use those libraries, the image extracts the package
+(`dpkg-deb -x`) instead of registering it, so a current LTS base works:
+Ubuntu 24.04 (supported until 2029) with Mesa 24 and current ALSA/Pulse clients.
+
+Verified on Ubuntu 24.04: the app opens, renders with GLX (llvmpipe works for
+hosts without DRI) and enumerates audio devices.
 
 ### Support the Project
 
@@ -156,34 +211,86 @@ If this project helped you, consider supporting its development:
 
 ### License
 
-MIT - For Docker configuration files only.
+MIT — for the Docker/AppImage configuration and scripts only.
 
 ToneLib-GFX is property of ToneLib Team.
 
 ---
 
-**Issues?** Open an [issue](https://github.com/YOUR_USERNAME/tonelib-docker/issues).
-
----
-
 ## Português
 
-Execute o **ToneLib-GFX** em distribuições Linux modernas usando Docker.
+Execute o **ToneLib-GFX 4.9.5** em distribuições Linux modernas — como
+**AppImage** standalone gerado localmente a partir do `.deb` oficial, ou dentro
+de um container **Docker**.
 
 ### O Problema
 
-O pacote `.deb` do ToneLib-GFX depende de bibliotecas que não existem mais no Ubuntu 22.04+, Linux Mint 21+, Debian 12+:
+O pacote `.deb` oficial declara dependências que não existem mais no
+Ubuntu 22.04+/24.04, Linux Mint 21+, Debian 12+:
 
 ```
 Package libgl1-mesa-glx is not installable
 Package libcurl3-gnutls is not installable
+Package libgcc1 is not installable
 ```
 
-### A Solução
+Por isso `dpkg -i ToneLib-GFX-amd64.deb` falha. O binário não usa nenhuma
+dessas bibliotecas: ele traz **Qt5 estático** e carrega apenas `libc`, `libm`,
+`libasound`, `libGL`, `libfontconfig` e `libfreetype` (o resto — X11,
+`libcurl-gnutls`, `libjack` — é carregado com `dlopen` em tempo de execução).
 
-Container Docker com Ubuntu 20.04 que possui todas as dependências necessárias.
+### Aviso de licença
 
-### Instalação
+O ToneLib-GFX é proprietário. Este repositório **não distribui o `.deb`, o
+AppImage nem qualquer binário da ToneLib** — só scripts e configuração. Você
+baixa o `.deb` no site oficial e gera o AppImage localmente.
+
+### Baixar o ToneLib-GFX
+
+Baixe `ToneLib-GFX-amd64.deb` (Ubuntu 64-bit) no
+[site oficial](https://tonelib.net/gfx-overview/) e coloque na raiz do
+repositório.
+
+```bash
+git clone https://github.com/docg1701/tonelib-docker.git
+cd tonelib-docker
+mv ~/Downloads/ToneLib-GFX-amd64.deb .
+```
+
+### Opção 1 — AppImage (sem Docker)
+
+Requisitos: x86_64, glibc ≥ 2.27 (qualquer distro de 2018 pra cá), X11 ou
+XWayland, driver OpenGL funcionando, ALSA ou PulseAudio.
+
+```bash
+# dependência de build
+sudo apt install squashfs-tools        # Debian/Ubuntu
+# sudo dnf install squashfs-tools      # Fedora
+# sudo pacman -S squashfs-tools        # Arch
+
+./build-appimage.sh
+./ToneLib-GFX-4.9.5-x86_64.AppImage
+```
+
+O `build-appimage.sh` descompacta o `.deb`, adiciona o wrapper `AppRun` e
+empacota tudo num único executável (runtime + squashfs). No final ele mostra o
+tamanho e o sha256 do arquivo.
+
+O que vai dentro do AppImage: o binário do ToneLib, ícones e a entrada de
+desktop. O que vem do host: glibc, X11/XWayland, driver OpenGL e a pilha de
+áudio. Empacotar glibc, `libGL` ou `libX11` é justamente o que quebra AppImages,
+então essas ficam no host (prática padrão).
+
+Se não houver FUSE (containers, ou Ubuntu 24.04 sem `libfuse2t64`):
+
+```bash
+APPIMAGE_EXTRACT_AND_RUN=1 ./ToneLib-GFX-4.9.5-x86_64.AppImage
+```
+
+Os plugins VST/VST3 do `.deb` **não** entram no AppImage — uma DAW precisa deles
+no sistema de arquivos real, não dentro de um squashfs.
+
+### Opção 2 — Docker
 
 #### 1. Instalar Docker
 
@@ -194,25 +301,19 @@ sudo usermod -aG docker $USER
 newgrp docker
 ```
 
-#### 2. Baixar o ToneLib-GFX
-
-Baixe o arquivo `.deb` do [site oficial](https://tonelib.net/gfx-overview/).
-
-#### 3. Clonar e preparar
-
-```bash
-git clone https://github.com/docg1701/tonelib-docker.git
-cd tonelib-docker
-mv ~/Downloads/ToneLib-GFX-amd64.deb .
-```
-
-#### 4. Executar
+#### 2. Executar
 
 ```bash
 ./run.sh
 ```
 
-Pronto! O aplicativo abre com interface gráfica e áudio funcionando.
+O `run.sh` baixa o `.deb` mais recente do tonelib.net se ele não existir e
+reconstrói a imagem só quando o `.deb` muda (compara o sha256 do arquivo com
+uma label da imagem). Para pegar uma versão nova do ToneLib:
+
+```bash
+./run.sh --update
+```
 
 ### Adicionar ao Menu
 
@@ -220,69 +321,62 @@ Pronto! O aplicativo abre com interface gráfica e áudio funcionando.
 ./install-desktop.sh
 ```
 
-Aparecerá em: Menu → Multimídia → ToneLib GFX (Docker)
+Cria entradas para o AppImage (se gerado) e para o Docker em
+Menu → Som e Vídeo.
 
 ### Pasta Compartilhada
 
-O diretório home completo do ToneLib `~/tonelib/` é compartilhado com o container.
+O diretório `~/tonelib/` é usado nos dois modos (Docker: montado no container;
+AppImage: o app escreve direto), então os arquivos são os mesmos.
 
 **Diretórios úteis:**
-- `~/tonelib/` - Adicione backing tracks, IRs, presets aqui
-- `~/tonelib/Music/GFX-Recordings/` - Suas gravações serão salvas aqui
-- Todos os arquivos são diretamente acessíveis do ToneLib-GFX
+- `~/tonelib/` — backing tracks, IRs, perfis NAM, presets
+- `~/tonelib/Music/GFX-Recordings/` — suas gravações
 
 ```bash
-# Exemplo: Adicionar backing tracks
-cp ~/Downloads/*.mp3 ~/tonelib/
-
-# Exemplo: Acessar gravações
-ls ~/tonelib/Music/GFX-Recordings/
+cp ~/Downloads/*.mp3 ~/tonelib/          # adicionar backing tracks
+ls ~/tonelib/Music/GFX-Recordings/       # acessar gravações
 ```
 
 ### Latência de Áudio
 
-O container detecta e configura automaticamente o melhor backend de áudio disponível:
+#### 🎯 PulseAudio (padrão)
+- **Latência:** ~10-20ms
+- **Configuração:** funciona imediatamente (`PULSE_LATENCY_MSEC=20`)
+- **Buffer:** 128-256 samples no ToneLib-GFX
 
-#### 🎯 PulseAudio (Padrão)
-- **Latência:** ~10-20ms total
-- **Configuração:** Funciona imediatamente
-- **Ideal para:** Prática em casa, tocar junto com músicas
-- **Configuração:** Buffer de 128-256 samples no ToneLib-GFX
+#### ⚡ JACK (baixa latência)
+- **Latência:** ~3-5ms
+- **Configuração:** instale `jackd2` no host e inicie antes do app
+- **Docker:** o socket JACK e `/dev/shm` já são compartilhados com o container
 
-#### ⚡ JACK Audio (Baixa Latência)
-- **Latência:** ~3-5ms total
-- **Configuração:** Instale JACK no host e inicie antes de executar o container
-- **Ideal para:** Tocar em tempo real, gravação
-- **Auto-detectado:** Container muda para JACK automaticamente se disponível
-
-**Dicas para melhor performance:**
-- Use interface USB dedicada (não onboard)
-- Feche outras aplicações de áudio
-- Para JACK: Instale `jackd2` e `qjackctl` no seu sistema host
-- Ajuste buffer no ToneLib-GFX (128 samples recomendado)
+**Dicas:** use interface USB dedicada, feche outros apps de áudio, buffer de 128
+samples.
 
 ### Troubleshooting
 
-#### Aplicativo não abre
-
+#### Aplicativo não abre (Docker)
 ```bash
 xhost +local:docker
 ```
 
-#### Sem áudio
+#### AppImage não monta
+```bash
+sudo apt install libfuse2t64            # Debian/Ubuntu 24.04
+APPIMAGE_EXTRACT_AND_RUN=1 ./ToneLib-GFX-*.AppImage
+```
 
+#### Sem áudio
 ```bash
 pulseaudio --check || pulseaudio --start
 ```
 
 #### Verificar interface de áudio
-
 ```bash
 docker compose run --rm tonelib-gfx aplay -l
 ```
 
 #### Limpar e reconstruir
-
 ```bash
 docker compose down
 docker rmi tonelib-gfx:latest
@@ -292,36 +386,44 @@ docker compose build --no-cache
 ### Estrutura
 
 ```
-~/tonelib/                      # Diretório home do ToneLib (criado automaticamente)
+~/tonelib/                      # diretório home do ToneLib (criado na 1ª execução)
   ├── Music/
-  │   └── GFX-Recordings/      # Suas gravações
-  └── (backing tracks, IRs, presets)
+  │   └── GFX-Recordings/       # suas gravações
+  └── (backing tracks, IRs, perfis NAM, presets)
 
 tonelib-docker/
-├── Dockerfile
+├── Dockerfile                  # imagem Ubuntu 24.04
 ├── compose.yml
-├── entrypoint.sh
-├── run.sh
-├── install-desktop.sh
-└── ToneLib-GFX-amd64.deb       # (você adiciona)
+├── entrypoint.sh               # entrypoint do container
+├── run.sh                      # Docker: baixar + buildar + rodar
+├── build-appimage.sh           # AppImage: gera a partir do .deb
+├── install-desktop.sh          # entradas no menu
+├── AGENTS.md                   # notas para agentes de IA/código
+└── ToneLib-GFX-amd64.deb       # (você adiciona, nunca é commitado)
 ```
 
-### Por que Ubuntu 20.04?
+### Por que Ubuntu 24.04?
 
-Última versão LTS com `libgl1-mesa-glx` e `libcurl3-gnutls`. Versões mais novas removeram esses pacotes.
+O `.deb` não instala com `dpkg -i` em nada mais novo que 22.04 por causa do
+`Depends` obsoleto. Como o binário é Qt5 estático e não usa essas libs, a imagem
+extrai o pacote (`dpkg-deb -x`) em vez de registrá-lo — assim uma base LTS atual
+funciona: Ubuntu 24.04 (suporte até 2029), Mesa 24 e clientes ALSA/Pulse atuais.
+
+Verificado no Ubuntu 24.04: o app abre, renderiza via GLX (llvmpipe atende hosts
+sem DRI) e enumera dispositivos de áudio.
 
 ### Apoie o Projeto
 
 Se este projeto te ajudou, considere apoiar seu desenvolvimento:
 
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/docg1701)
+[![ko-fi](https://ko-fi.com/githubbutton_sm.svg)](https://ko-fi.com/docg1701)
 
 ### Licença
 
-MIT - Apenas para arquivos de configuração Docker.
+MIT — apenas para os scripts e configuração de Docker/AppImage.
 
 ToneLib-GFX é propriedade da ToneLib Team.
 
 ---
 
-**Problemas?** Abra uma [issue](https://github.com/SEU_USUARIO/tonelib-docker/issues).
+**Problemas?** Abra uma [issue](https://github.com/docg1701/tonelib-docker/issues).
